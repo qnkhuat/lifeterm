@@ -1,3 +1,10 @@
+# vim file
+*.swp
+*.swo
+
+# open sources
+repos
+
 # Prerequisites
 *.d
 
@@ -50,3 +57,5 @@ modules.order
 Module.symvers
 Mkfile.old
 dkms.conf
+
+
