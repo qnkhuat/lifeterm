@@ -25,19 +25,16 @@ enum editorKey {
 };
 
 /*** data ***/
-
-
 struct editorConfig { 
 	int cx, cy;
 	int screenrows;
 	int screencols;
+	int **grid;
 	struct termios orig_termios;
 };
 
 
 struct editorConfig E;
-
-
 
 /*** terminal ***/
 
@@ -254,26 +251,63 @@ void editorProcessKeypress(){
 }
 
 /*** output ***/
-void editorDrawRows(struct abuf *ab){
-	for(int y=0; y< E.screenrows; y++){
-		if (y==E.screenrows / 3){
-			char welcome[80];
-			int welcomelen = snprintf(welcome, sizeof(welcome),
-					"Welcome to my VIM  -- version %s", LIFETERM_VERSION);
+void editorDrawWelcomeMsg(struct abuf *ab){
+	char welcome[80];
+	int welcomelen = snprintf(welcome, sizeof(welcome),
+			"Welcome to my LIFETERM -- version %s", LIFETERM_VERSION);
 
-			if (welcomelen > E.screencols) welcomelen = E.screencols;
+	if (welcomelen > E.screencols) welcomelen = E.screencols;
 
-			int padding = (E.screencols - welcomelen) / 2;
-			if(padding) abAppend(ab, "~", 1);
-			while (padding --) abAppend(ab, " ", 1);
+	int padding = (E.screencols - welcomelen) / 2;
+	if(padding) abAppend(ab, "~", 1);
+	while (padding --) abAppend(ab, " ", 1);
 
-			abAppend(ab, welcome, welcomelen); // say welcome to users
+	abAppend(ab, welcome, welcomelen); // say welcome to users
+}
+
+//void editorDrawRows(struct abuf *ab){
+//	for(int y=0; y < E.screenrows; y++){
+//		if (y==E.screenrows / 3)
+//			editorDrawWelcomeMsg(ab);
+//		else{
+//			abAppend(ab, "~", 1);
+//		}
+//		abAppend(ab, "\x1b[K", 3); // clear the current line
+//		if (y < E.screenrows) abAppend(ab, "\r\n", 2);
+//	}
+//}
+
+void editorDrawStatusBar(struct abuf *ab) {
+	abAppend(ab, "\x1b[7m", 4);// switch to inverted color
+	char status[120], rstatus[120];
+
+	int len = snprintf(status, sizeof(status), "This is the status bar");
+	int rlen = snprintf(rstatus, sizeof(rstatus), "%d-%d",E.cx + 1,  E.cy + 1);
+	if (len > E.screencols) len = E.screencols;
+	abAppend(ab, status, len);
+	while (len < E.screencols) {
+		if (E.screencols - len == rlen) {
+			abAppend(ab, rstatus, rlen);
+			break;
+		} else {
+			abAppend(ab, " ", 1);
+			len++;
 		}
-		else{
-			abAppend(ab, "~", 1);
+	}
+	abAppend(ab, "\x1b[m", 3);// switch back to normal color
+	//abAppend(ab, "\r\n", 2);
+}
+
+
+void editorDrawGrid(struct abuf *ab) {
+	for (int row = 0; row < E.screenrows; row++){
+		for (int col = 0; col < E.screencols; col++){
+			E.grid[row][col] = 1;
+			char c[1] = {E.grid[row][col]}; // convert to char
+			abAppend(ab, E.grid[row][col], 1);
+			//printf("%s", c);
 		}
-		abAppend(ab, "\x1b[K", 3); // clear the current line
-		if (y < E.screenrows -1) abAppend(ab, "\r\n", 2);
+		abAppend(ab, "\r\n", 2);
 	}
 }
 
@@ -284,7 +318,9 @@ void editorRefreshScreen() {
 	abAppend(&ab, "\x1b[?25l", 6); // Turn off cursor before refresh 
 	abAppend(&ab, "\x1b[H", 3); // clear screen
 
-	editorDrawRows(&ab); // draw all lines have start with char: ~
+	//editorDrawRows(&ab); // draw all lines have start with char: ~
+	editorDrawGrid(&ab);
+	editorDrawStatusBar(&ab);
 	char buf[32];
 	snprintf(buf, sizeof(buf), "\x1b[%d;%dH", E.cy + 1, E.cx + 1);
 	abAppend(&ab, buf, strlen(buf)); // position cursor at user current position
@@ -301,6 +337,13 @@ void initEditor(){
 	if (getWindowSize(&E.screenrows, &E.screencols) == -1 ) die("WindowSize");
 	E.cx = 0;
 	E.cy = 0;
+
+	// init grid
+	E.grid = malloc(E.screenrows * sizeof(int *));
+	for(int i = 0; i < E.screencols; i++) {
+		E.grid[i] = malloc(E.screencols * sizeof(int));
+	}
+	
 }
 
 int main(){
