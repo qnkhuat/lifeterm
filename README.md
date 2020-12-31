@@ -8,7 +8,7 @@ This is a work in progress, there are tons of thing to improve.
 ### RUN
 > The grid is based on the screen of your terminal, so make sure you larger your screen before run
 
-`./lifeterm`
+`chmod +x run.sh && ./run.sh`
 
 ### Keymap
 | Key      | Description               |
