@@ -2,6 +2,8 @@
 *.swp
 *.swo
 
+voila.c
+
 # open sources
 repos
 

@@ -13,6 +13,11 @@
 
 #define CTRL_KEY(k) ((k) & 0x1f) // & in this line is bitwise-AND operator
 
+
+/*** Prototypes ***/
+
+void editorRefreshScreen();
+
 enum editorKey {
 	ARROW_LEFT = 1000,
 	ARROW_RIGHT, // = 1001 by convention
@@ -21,7 +26,12 @@ enum editorKey {
 	A_UPPER,
 	D_UPPER,
 	W_UPPER,
-	S_UPPER
+	S_UPPER,
+	STEP,
+	PLAY,
+	MARK,
+	ERASE,
+	QUIT
 };
 
 /*** data ***/
@@ -29,6 +39,9 @@ struct editorConfig {
 	int cx, cy;
 	int screenrows;
 	int screencols;
+	int gridrows;
+	int gridcols;
+	int playing;
 	int **grid;
 	struct termios orig_termios;
 };
@@ -100,6 +113,11 @@ int editorReadKey() {
 		case 'A': return A_UPPER;
 		case 'S': return S_UPPER;
 		case 'D': return D_UPPER;
+		case 'K': return W_UPPER;
+		case 'H': return A_UPPER;
+		case 'J': return S_UPPER;
+		case 'L': return D_UPPER;
+
 		case 'w': return ARROW_UP;
 		case 'a': return ARROW_LEFT;
 		case 's': return ARROW_DOWN;
@@ -108,10 +126,19 @@ int editorReadKey() {
 		case 'h': return ARROW_LEFT;
 		case 'j': return ARROW_DOWN;
 		case 'l': return ARROW_RIGHT;
-		case 'K': return W_UPPER;
-		case 'H': return A_UPPER;
-		case 'J': return S_UPPER;
-		case 'L': return D_UPPER;
+
+
+		case ' ':
+		case 'x': 
+							return MARK;
+
+		case 'n':
+		case 'u': return STEP;
+		//case 'p': return PLAY;
+		case 'r': return ERASE;
+
+		case 'Q':
+		case 'q': return QUIT;
 	}
 
 	if (c == '\x1b') {
@@ -192,6 +219,69 @@ void abFree(struct abuf *ab){
 	free(ab->b);
 }
 
+/*** grid operations ***/
+void gridMark(){
+	E.grid[E.cy][E.cx] ^= 1;
+}
+
+void gridErase(){
+	// TODO : use memset to set values not for loop
+	for (int row = 0; row < E.gridrows; row++){
+		for (int col = 0; col < E.gridcols; col++){
+			E.grid[row][col] = 0;
+		}
+	}
+}
+
+void gridUpdate(){
+	/***
+	 * 1. Any live cell with fewer than two live neighbours dies, as if by underpopulation.
+	 * 2. Any live cell with two or three live neighbours lives on to the next generation.
+	 * 3. Any live cell with more than three live neighbours dies, as if by overpopulation.
+	 * 4. Any dead cell with exactly three live neighbours becomes a live cell, as if by reproduction.
+	 ***/
+	// TODO: optimize this to not use 2 fors
+	int tempGrid[E.gridrows][E.gridcols];
+	for (int row = 0; row < E.gridrows; row++){
+		for (int col = 0; col < E.gridcols; col++){
+			tempGrid[row][col] = E.grid[row][col];
+		}
+	}
+
+
+	// TODO: fix to handle case at edges
+	for (int col = 1; col < E.gridcols-1; col++){
+		for (int row = 1; row < E.gridrows-1; row++){
+			int count = tempGrid[row - 1][col - 1] + \
+									tempGrid[row - 1][col] + \
+									tempGrid[row - 1][col + 1] + \
+									tempGrid[row][col - 1] + \
+									tempGrid[row][col + 1] + \
+									tempGrid[row + 1][col - 1] + \
+									tempGrid[row + 1][col] + \
+									tempGrid[row + 1][col + 1];
+			if(count< 2)
+				E.grid[row][col] = 0; 
+			else if(count == 3)
+				E.grid[row][col] = 1; 
+			else if(count > 3)
+				E.grid[row][col] = 0; 
+		}
+	}
+}
+
+
+void gridPlay(){
+	while(1){
+		int c = editorReadKey();
+		if (c == PLAY){
+			gridUpdate();
+			editorRefreshScreen();
+			//sleep(0.1);
+			break;
+		}
+	}
+}
 
 /*** input ***/
 
@@ -207,7 +297,7 @@ void editorMoveCursor(int key){
 			if(E.cy!=0)	E.cy--;
 			break;
 		case ARROW_DOWN:
-			if (E.cy != E.screenrows-1) E.cy++;
+			if (E.cy != E.gridrows-1) E.cy++;
 			break;
 		case A_UPPER:
 			if (E.cx -10 <= 0) E.cx = 0;
@@ -222,7 +312,7 @@ void editorMoveCursor(int key){
 			else E.cy-=10;
 			break;
 		case S_UPPER:
-			if (E.cy + 10 >= E.screenrows) E.cy = E.screenrows-1;
+			if (E.cy + 10 >= E.screenrows) E.cy = E.gridrows-1;
 			else E.cy+=10;
 			break;
 	}
@@ -232,9 +322,13 @@ void editorProcessKeypress(){
 	int c = editorReadKey();
 
 	switch(c){
+		case QUIT:
 		case CTRL_KEY('q'):
 			clearScreen();
 			exit(0);
+			break;
+		case ERASE:
+			gridErase();
 			break;
 		case ARROW_LEFT:
 		case ARROW_RIGHT:
@@ -246,6 +340,18 @@ void editorProcessKeypress(){
 		case D_UPPER:
 			editorMoveCursor(c);
 			break;
+
+		case MARK:
+			gridMark();
+			break;
+		case STEP:
+			gridUpdate();
+			break;
+
+		case PLAY:
+			gridPlay();
+			break;
+
 	}
 
 }
@@ -265,23 +371,11 @@ void editorDrawWelcomeMsg(struct abuf *ab){
 	abAppend(ab, welcome, welcomelen); // say welcome to users
 }
 
-//void editorDrawRows(struct abuf *ab){
-//	for(int y=0; y < E.screenrows; y++){
-//		if (y==E.screenrows / 3)
-//			editorDrawWelcomeMsg(ab);
-//		else{
-//			abAppend(ab, "~", 1);
-//		}
-//		abAppend(ab, "\x1b[K", 3); // clear the current line
-//		if (y < E.screenrows) abAppend(ab, "\r\n", 2);
-//	}
-//}
-
 void editorDrawStatusBar(struct abuf *ab) {
 	abAppend(ab, "\x1b[7m", 4);// switch to inverted color
 	char status[120], rstatus[120];
 
-	int len = snprintf(status, sizeof(status), "This is the status bar");
+	int len = snprintf(status, sizeof(status), "press q to quit --- wasd|hjkl|ARROWS to navigate (upper case to move faster) --- x|space to mark --- u|n to update");
 	int rlen = snprintf(rstatus, sizeof(rstatus), "%d-%d",E.cx + 1,  E.cy + 1);
 	if (len > E.screencols) len = E.screencols;
 	abAppend(ab, status, len);
@@ -300,12 +394,15 @@ void editorDrawStatusBar(struct abuf *ab) {
 
 
 void editorDrawGrid(struct abuf *ab) {
-	for (int row = 0; row < E.screenrows; row++){
-		for (int col = 0; col < E.screencols; col++){
-			E.grid[row][col] = 1;
-			char c[1] = {E.grid[row][col]}; // convert to char
-			abAppend(ab, E.grid[row][col], 1);
-			//printf("%s", c);
+	for (int row = 0; row < E.gridrows; row++){
+		for (int col = 0; col < E.gridcols; col++){
+			if (E.grid[row][col] == 1){
+				abAppend(ab, "\x1b[7m", 4);// switch to inverted color
+				abAppend(ab, " ", 1);
+				abAppend(ab, "\x1b[m", 3);// switch back to normal color
+			}
+			else
+				abAppend(ab, " ", 1);
 		}
 		abAppend(ab, "\r\n", 2);
 	}
@@ -337,12 +434,17 @@ void initEditor(){
 	if (getWindowSize(&E.screenrows, &E.screencols) == -1 ) die("WindowSize");
 	E.cx = 0;
 	E.cy = 0;
+	E.playing = 0;
+	E.gridrows = E.screenrows - 1; // status bar
+	E.gridcols = E.screencols;
 
 	// init grid
-	E.grid = malloc(E.screenrows * sizeof(int *));
-	for(int i = 0; i < E.screencols; i++) {
-		E.grid[i] = malloc(E.screencols * sizeof(int));
+	E.grid = malloc(E.gridrows* sizeof(int *));
+	for(int i = 0; i < E.gridcols; i++) {
+		E.grid[i] = malloc(E.gridcols* sizeof(int));
 	}
+
+	gridErase();
 	
 }
 
