@@ -2,7 +2,7 @@
 Game of life editor right on your terminal because why not? 🤷
 
 This is a work in progress, there are tons of thing to improve.
-![](./assets/earther.png)
+![](./assets/demo.png)
 
 # How to 
 ### RUN
