@@ -30,3 +30,4 @@ For the best experience, Use the font [square](/assets/square.ttf) on your termi
 - [ ] Square grid cell without font
 - [ ] Add load/save game
 - [ ] Infinite grid / Dynamic size grid
+
