@@ -6,7 +6,7 @@ This is a work in progress, there are tons of thing to improve.
 
 # How to 
 ### RUN
-> The grid is based on the screen of your terminal, so make sure you larger your screen before run
+> The grid is based on the screen size of your terminal, so make sure you larger your screen before run
 
 `chmod +x run.sh && ./run.sh`
 
