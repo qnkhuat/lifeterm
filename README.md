@@ -17,7 +17,7 @@ This is a work in progress, there are tons of thing to improve.
 | W, A, S, D  | Game style: move 10 steps |
 | h, j, k, l  | Vim style: move one step   |
 | H, J, K, L  | Vim style: move one step   |
-| Arrows   | Move on step              |
+| Arrows   | Move one step              |
 | x, space | Spawn/Kill a cell         |
 | u, n     | Next generation           |
 | r, R     | Refresh           |
