@@ -2,7 +2,7 @@
 #include <assert.h>
 #include <stdlib.h>
 
-#define DEBUG 1
+#define DEBUG 0
 /*
  *	Several things we need to consider
  * - How do we hash in C? I don't think we need to store the hash in side the Node, bc address itself is a good hash.
@@ -30,16 +30,24 @@ Node off = {0, 0, NULL, NULL, NULL, NULL};
 void print_node();
 Node *find_node();
 Node *newnode();
+struct editorConfig { 
+	int cx, cy;
+	int screenrows;
+	int screencols;
+	int gridrows;
+	int gridcols;
+	int playing;
+	int **grid;
+};
+struct editorConfig E;
 
 /*** Node operations ***/
 Node *join(const Node *a, const Node *b, const Node *c, const Node *d){
-	//assert(a->k == b->k, a->k == c->k, a->k  == d->k); // make sure all nodes are the same level
 	assert((a->k ^ b->k ^ c->k ^ d->k) == 0); // make sure all nodes are the same level
 	Node *p;
 	p = find_node(a, b, c, d);
-	if (!p){
+	if (!p)
 		p = newnode(a, b, c, d);
-	}
 	return p;
 }
 
@@ -47,9 +55,8 @@ Node *join(const Node *a, const Node *b, const Node *c, const Node *d){
 #define MAX_NODES (1 << 2*8) - 1
 // INIT THE HASHTAB
 Node **hashtab;
-void init(){
-	hashtab = (Node **)calloc(MAX_NODES, sizeof(Node *)) ;
-}
+void init(){ hashtab = (Node **)calloc(MAX_NODES, sizeof(Node *)); }
+void resize();
 
 unsigned int node_hash(Node *a, Node *b, Node *c, Node *d) {
 	// TODO: is there a better way to hash?
@@ -64,7 +71,7 @@ unsigned int node_hash(Node *a, Node *b, Node *c, Node *d) {
 // Create a node from 4 child node
 Node *newnode(Node *a, Node *b, Node *c, Node *d){
 	assert((a->k ^ b->k ^ c->k ^ d->k) == 0); // make sure all nodes are the same level
-	assert(a->k < 30); // At development stage we want to make sure everything goes into our control
+	assert(a->k < 30); // At development stage we want to make sure everything is in our control
 	Node *node = malloc(sizeof(Node));
 
 	// init value of node
@@ -78,7 +85,7 @@ Node *newnode(Node *a, Node *b, Node *c, Node *d){
 
 	int h = node_hash(a, b, c, d);
 	hashtab[h] = node; // push in to hashtable
-#ifdef DEBUG
+#if DEBUG
 	printf("Create new node: "); print_node(node);
 #endif
 
@@ -88,13 +95,6 @@ Node *newnode(Node *a, Node *b, Node *c, Node *d){
 Node *find_node(Node *a, Node *b, Node *c, Node *d){
 	int h = node_hash(a, b, c, d);
 	Node *p = hashtab[h];
-	//if (!p || (p->a != a && p->b != b && p->c != c && p->d != d)){
-	//	p = newnode(a, b, c, d);
-	//#ifdef DEBUG
-	//	printf("Create new node: "); print_node(p);
-	//#endif
-	//	hashtab[h] = p; // put into hash table
-	//}
 	return p;
 }
 
@@ -122,6 +122,7 @@ struct MapNode {
 Node *construct(){
 	// Better way to init a 2-D arrays
 	//int n = 3; // Number of points
+	// TODO: represent points as a dynamica 2-D arrays
 	//int (*points)[n] = malloc(sizeof(int[n][2]));
 
 	unsigned int n = 3; // number of points
@@ -147,61 +148,73 @@ Node *construct(){
 	}
 
 	int k = 0;
-	while (n > 1){
+	while (n > 1){ // until there are only root node left
 		Node *z = get_zero(k);
 		MapNode *next_level = malloc(n * sizeof(MapNode));
-		int m = 0;
-		for (int i = 0; i < n; i++){
+		int m = 0; // store number of node in this level
+		for (int i = 0; i < n; i++){ // Each loop is to construct one level
 			MapNode p = pattern[i];
 			if (p.p == NULL)
 				continue;
 
 			Node *a = z, *b = z, *c = z, *d = z ;
-			int x = p.x;
-			int y = p.y;
-			x = x - (x & 1); y = y - (y & 1); // Move index to the start of its block
+			int x = p.x - p.x % 1; int y = p.y - p.y % 2; // Move index to the start of its block
 			for (int j = i; j < n; j++){ // Find all points that inside this 2x2 block
-				int hit = 0;
-
 				MapNode pp = pattern[j];
 				if (pp.p == NULL)
 					continue;
 
 				if (pp.x == x && pp.y == y){
 					a = pp.p;
-					hit = 1;
-				}
-				else if (pp.x == x + 1 && pp.y == y){
+					// TODO: Are there a way we can remove pointer using pp instead of original pattern[j]?
+					pattern[j].p = NULL;
+				} else if (pp.x == x + 1 && pp.y == y){
 					b = pp.p;
-					hit = 1;
-				}
-				else if (pp.x == x && pp.y == y + 1){
+					pattern[j].p = NULL;
+				} else if (pp.x == x && pp.y == y + 1){
 					c = pp.p;
-					hit = 1;
-				}
-				else if (pp.x == x + 1 && pp.y == y + 1){
+					pattern[j].p = NULL;
+				} else if (pp.x == x + 1 && pp.y == y + 1){
 					d = pp.p;
-					hit = 1;
-				}
-
-				if (hit){
 					pattern[j].p = NULL;
 				}
-
 			}
-			Node *nodek = newnode(a, b, c, d);
+
+			Node *nodek = find_node(a, b, c, d);
+			if (nodek == NULL) // create new if does not exist
+				nodek = newnode(a, b, c, d);
 			next_level[m] = (MapNode){.x = x >> 1, .y = y >> 1, . p = nodek}; // store a list of all pattern in this level
 			m++;
 		}
-		n = m;
-		k++;
+		n = m; k++;
 		free(pattern);
 		pattern = next_level;
 	}
-	return pattern->p;
+	
+	Node *result = pattern->p;
+	free(pattern); // Can't let the garbage floatting around
+	return result;
 }
 
-int **expand();
+void expand(Node *node, int x, int y){
+	if (node->n == 0)
+		return;
+	
+	if (node->k == 0){
+		E.grid[x][y] = 1;
+#if DEBUG
+		printf("x:%d, y:%d\n", x, y);
+#endif
+		return;
+	}
+
+	int offset = 1 << (node->k - 1);
+	expand(node->a, x, y);
+	expand(node->b, x + offset, y);
+	expand(node->c, x, y + offset);
+	expand(node->d, x + offset, y + offset);
+	
+};
 Node advance();
 Node successor();
 
@@ -214,6 +227,7 @@ void print_node(const Node *node){
 }
 
 
+/*** Tests ***/
 void test_get_zero(){
 	Node *p = get_zero(3);
 	print_node(p);
@@ -223,19 +237,34 @@ void test_get_zero(){
 
 void test_construct(){
 	Node *p = construct();
+	print_node(p);
+}
+
+
+void test_expand(){
+	Node *p = construct();
+	print_node(p);
+	expand(p, 0, 0);
+}
+
+void init_e(){
+	E.cx = 0;
+	E.cy = 0;
+	E.playing = 0;
+	E.screenrows=58;
+	E.screencols=238;
+	E.grid = calloc( E.screencols, sizeof(int *) );
+	for ( size_t i = 0; i < E.screencols; i++ )
+		E.grid[i] = calloc( E.screenrows, sizeof(int) );
 }
 
 int main(){
 	init();
+	init_e();
+	//test_construct();
+	test_expand();
 	return 0;
 }
-
-
-
-
-
-
-
 
 
 

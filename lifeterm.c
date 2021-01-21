@@ -248,7 +248,6 @@ void gridUpdate(){
 		}
 	}
 
-
 	// TODO: fix to handle case at edges
 	for (int col = 1; col < E.gridcols-1; col++){
 		for (int row = 1; row < E.gridrows-1; row++){
@@ -389,7 +388,6 @@ void editorDrawStatusBar(struct abuf *ab) {
 		}
 	}
 	abAppend(ab, "\x1b[m", 3);// switch back to normal color
-	//abAppend(ab, "\r\n", 2);
 }
 
 
