@@ -1,3 +1,5 @@
+#ifndef HASHLIFE
+#define HASHLIFE
 #include <stdio.h>
 #include <assert.h>
 #include <stdlib.h>
@@ -5,6 +7,7 @@
 #include <string.h>
 #include <math.h>
 #include <termios.h>
+#include "lifeterm.h"
 
 /*** Structs ***/
 typedef struct Node Node;
@@ -23,21 +26,6 @@ struct MapNode {
 	int y;
 	Node *p;
 };
-struct editorConfig { 
-	int cx, cy;
-	int x, y;
-	int screenrows;
-	int screencols;
-	int gridrows;
-	int gridcols;
-	int playing;
-	int **grid;
-	struct termios orig_termios;
-};
-
-
-struct editorConfig E;
-
 
 /*** Node operations ***/
 Node *get_zero(int k);
@@ -77,6 +65,8 @@ void print_node();
 #define OFF &off
 #define MAX_DEPTH (1 << 2*8) - 1
 #define MAX_NODES (1 << 2*8) - 1
-extern Node on  = {1, 0, NULL, NULL, NULL, NULL};
-extern Node off = {0, 0, NULL, NULL, NULL, NULL};
+Node on  = {1, 0, NULL, NULL, NULL, NULL};
+Node off = {0, 0, NULL, NULL, NULL, NULL};
+Node **hashtab;
 
+#endif
