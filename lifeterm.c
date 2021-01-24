@@ -37,6 +37,7 @@ enum editorKey {
 /*** data ***/
 struct editorConfig { 
 	int cx, cy;
+	int x, y;
 	int screenrows;
 	int screencols;
 	int gridrows;
@@ -426,24 +427,63 @@ void editorRefreshScreen() {
 	abFree(&ab);
 }
 
+
+///*** Node operators ***/
+//void expand(Node *node, int x, int y){
+//	if (node->n == 0)
+//		return;
+//
+//	int size = 1 << node->k;
+//	// clip only points in view
+//	if (x + size <= E.x || x >= E.x + E.screencols || y + size <= E.y || y >= E.y + E.screenrows)
+//		return;
+//
+//
+//	// TODO: add assert x, y are inside the view
+//
+//	// base case
+//	if (node->k == 0){
+//		E.grid[x][y] = 1;
+//#if DEBUG
+//		printf("expand x:%d, y:%d\n", x, y);
+//#endif
+//		return;
+//	}
+//
+//	int offset = 1 << (node->k - 1);
+//	expand(node->a, x, y);
+//	expand(node->b, x + offset, y);
+//	expand(node->c, x, y + offset);
+//	expand(node->d, x + offset, y + offset);
+//}
+
+
 /*** init ***/
 
 void initEditor(){
+	//init();
 	if (getWindowSize(&E.screenrows, &E.screencols) == -1 ) die("WindowSize");
+	E.x = 0;
+	E.y = 0;
 	E.cx = 0;
 	E.cy = 0;
 	E.playing = 0;
 	E.gridrows = E.screenrows - 1; // status bar
 	E.gridcols = E.screencols;
-
-	// init grid
-	E.grid = malloc(E.gridrows* sizeof(int *));
-	for(int i = 0; i < E.gridcols; i++) {
-		E.grid[i] = malloc(E.gridcols* sizeof(int));
-	}
+	
+	E.grid = calloc( E.screencols, sizeof(int *) );
+	for ( size_t i = 0; i < E.screencols; i++ )
+		E.grid[i] = calloc( E.screenrows, sizeof(int) );
 
 	gridErase();
-	
+
+
+	//Node *p = construct();
+	//int points[4][2] = {{0, 0}, {4, 1}, {4, 2}, {4, 3}};
+
+	//Node *p = construct(points, 4);
+
+	//expand(p, E.screencols/2, E.screenrows/2);
 }
 
 int main(){
@@ -457,3 +497,4 @@ int main(){
 
 	return 0;
 }
+	
