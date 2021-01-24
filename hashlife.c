@@ -497,7 +497,7 @@ void init_e(){
 	for ( int i = 0; i < E.gridcols; i++ )
 		E.grid[i] = calloc( E.gridrows, sizeof(int) );
 }
-//
+
 //int main(){
 //	init();
 //	init_e();
