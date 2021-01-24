@@ -1,6 +1,5 @@
 #include "hashlife.h"
 
-extern Node **hashtab;
 /*** Node operations ***/
 Node *join(const Node *a, const Node *b, const Node *c, const Node *d){
 	assert((a->k ^ b->k ^ c->k ^ d->k) == 0); // make sure all nodes are the same level
@@ -498,16 +497,16 @@ void init_e(){
 	for ( int i = 0; i < E.gridcols; i++ )
 		E.grid[i] = calloc( E.gridrows, sizeof(int) );
 }
-
-int main(){
-	init();
-	init_e();
-	//test_construct();
-	//test_expand();
-	//test_life();
-	//test_life4x4();
-	//test_centre();
-	test_successor();
-	return 0;
-}
-
+//
+//int main(){
+//	init();
+//	init_e();
+//	//test_construct();
+//	//test_expand();
+//	//test_life();
+//	//test_life4x4();
+//	//test_centre();
+//	test_successor();
+//	return 0;
+//}
+//

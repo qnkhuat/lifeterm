@@ -1,55 +1,4 @@
-#include <stdlib.h>
-#include <termios.h>
-#include <errno.h>
-#include <unistd.h>
-#include <stdio.h>
-#include <ctype.h>
-#include <sys/ioctl.h>
-#include <string.h>
-
-
-/*** defines ***/
-#define LIFETERM_VERSION "0.0.0"
-
-#define CTRL_KEY(k) ((k) & 0x1f) // & in this line is bitwise-AND operator
-
-
-/*** Prototypes ***/
-
-void editorRefreshScreen();
-
-enum editorKey {
-	ARROW_LEFT = 1000,
-	ARROW_RIGHT, // = 1001 by convention
-	ARROW_UP,
-	ARROW_DOWN,
-	A_UPPER,
-	D_UPPER,
-	W_UPPER,
-	S_UPPER,
-	STEP,
-	PLAY,
-	MARK,
-	ERASE,
-	QUIT
-};
-
-/*** data ***/
-struct editorConfig { 
-	int cx, cy;
-	int x, y;
-	int screenrows;
-	int screencols;
-	int gridrows;
-	int gridcols;
-	int playing;
-	int **grid;
-	struct termios orig_termios;
-};
-
-
-struct editorConfig E;
-
+#include "lifeterm.h"
 /*** terminal ***/
 
 void clearScreen() {
@@ -200,13 +149,6 @@ int getWindowSize(int *rows, int *cols){
 }
 
 /*** append buffer ***/
-struct abuf {
-	char *b;
-	int len;
-};
-
-// acts as constructor for the abuf type
-#define ABUF_INIT {NULL, 0}
 
 void abAppend(struct abuf *ab, const char *c, int len){
 	char *new = realloc(ab->b, ab->len + len);
@@ -428,40 +370,11 @@ void editorRefreshScreen() {
 }
 
 
-///*** Node operators ***/
-//void expand(Node *node, int x, int y){
-//	if (node->n == 0)
-//		return;
-//
-//	int size = 1 << node->k;
-//	// clip only points in view
-//	if (x + size <= E.x || x >= E.x + E.screencols || y + size <= E.y || y >= E.y + E.screenrows)
-//		return;
-//
-//
-//	// TODO: add assert x, y are inside the view
-//
-//	// base case
-//	if (node->k == 0){
-//		E.grid[x][y] = 1;
-//#if DEBUG
-//		printf("expand x:%d, y:%d\n", x, y);
-//#endif
-//		return;
-//	}
-//
-//	int offset = 1 << (node->k - 1);
-//	expand(node->a, x, y);
-//	expand(node->b, x + offset, y);
-//	expand(node->c, x, y + offset);
-//	expand(node->d, x + offset, y + offset);
-//}
-
 
 /*** init ***/
 
 void initEditor(){
-	//init();
+	init();
 	if (getWindowSize(&E.screenrows, &E.screencols) == -1 ) die("WindowSize");
 	E.x = 0;
 	E.y = 0;
@@ -478,23 +391,26 @@ void initEditor(){
 	gridErase();
 
 
-	//Node *p = construct();
-	//int points[4][2] = {{0, 0}, {4, 1}, {4, 2}, {4, 3}};
+	int points[4][2] = {{0, 0}, {4, 1}, {4, 2}, {4, 3}};
 
-	//Node *p = construct(points, 4);
+	Node *p = construct(points, 4);
 
-	//expand(p, E.screencols/2, E.screenrows/2);
+	expand(p, E.screencols/2, E.screenrows/2);
 }
 
-int main(){
-	enableRawMode();
-	initEditor();
-
-	while(1){
-		editorRefreshScreen();
-		editorProcessKeypress();
-	}
-
-	return 0;
+void test(){
+	printf("abc\n");
 }
-	
+
+//int main(){
+//	enableRawMode();
+//	initEditor();
+//
+//	while(1){
+//		editorRefreshScreen();
+//		editorProcessKeypress();
+//	}
+//
+//	return 0;
+//}
+//	
