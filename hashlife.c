@@ -1,4 +1,7 @@
 #include "hashlife.h"
+Node on  = {1, 0, NULL, NULL, NULL, NULL};
+Node off = {0, 0, NULL, NULL, NULL, NULL};
+Node **hashtab;
 
 /*** Node operations ***/
 Node *join(const Node *a, const Node *b, const Node *c, const Node *d){

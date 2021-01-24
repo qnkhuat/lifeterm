@@ -65,8 +65,5 @@ void print_node();
 #define OFF &off
 #define MAX_DEPTH (1 << 2*8) - 1
 #define MAX_NODES (1 << 2*8) - 1
-Node on  = {1, 0, NULL, NULL, NULL, NULL};
-Node off = {0, 0, NULL, NULL, NULL, NULL};
-Node **hashtab;
 
 #endif
