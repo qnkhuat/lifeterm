@@ -1,10 +1,14 @@
 .DEFAULT_GOAL := lifeterm
 CC=gcc
+
 lifeterm: lifeterm.c
-	@$(CC) lifeterm.c hashlife.c -g -o lifeterm.o -Wall -Wextra -pedantic -std=c99
+	@$(CC) lifeterm.c hashlife.c log.c -g -o lifeterm.o -Wall -Wextra -pedantic -std=c99
 
 hashlife: hashlife.c 
 	@$(CC) hashlife.c hashlife.c -g -o hashlife.o -Wall -Wextra -pedantic -std=c99 -Wno-incompatible-pointer-types-discards-qualifiers 
  
-test: test.c 
-	@$(CC) test.c hashlife.c lifeterm.c -g -o test.o -Wall -Wextra -pedantic -std=c11 
+test_hash: test_hash.c 
+	@$(CC) test_hash.c -g -o test_hash.o -Wall -Wextra -pedantic -std=c11 
+
+clean:
+	@rm -rf *.dSYM *.swp

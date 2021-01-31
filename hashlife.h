@@ -8,24 +8,26 @@
 #include <math.h>
 #include <termios.h>
 #include "lifeterm.h"
+#include "log.h"
+#include <limits.h>
 
 /*** Structs ***/
 typedef struct Node Node;
 struct Node {
 	unsigned int n; // number of live cells. Max 4,294,967,295
 	unsigned short k; // level. Max 65,535
+	Node *next; // Chaining to handle hash collision
 	Node *a; // top left
 	Node *b; // top right
 	Node *c; // bottom left
 	Node *d; // bottom right
 };
 
-typedef struct MapNode MapNode;
-struct MapNode {
+typedef struct{
 	int x;
 	int y;
 	Node *p;
-};
+} MapNode;
 
 /*** Node operations ***/
 Node *get_zero(int k);
@@ -39,14 +41,13 @@ void mark(Node *node, int x, int y, int mx, int my);
 
 // For Update
 Node *successor(Node *p, int j);
-Node *advance(Node *p, int step);
+Node *advance(Node *p, int n);
 Node *life(Node *n1, Node *n2, Node *n3, Node *n4, Node *c, Node *n6, Node *n7, Node *n8, Node *n9);
 Node *life4x4(Node *p);
 
 /*** View helpers ***/
 void init();
 void resize();
-void render(Node *p);
 
 /*** Utilities ***/
 int is_padded(Node *p);
@@ -54,16 +55,18 @@ Node *inner(Node *p);
 Node *crop(Node *p);
 Node *centre(Node *p);
 Node *pad(Node *p);
-void print_node();
+void print_node(const Node *p);
+int next_prime(int i);
 
+
+/*** Test ***/
+void test_new_collided();
 
 /*** Defines ***/
-#define DEBUG 1
-#define MAX_DEPTH (1 << 2*8) - 1
-#define MAX_NODES (1 << 2*8) - 1
+#define MAX_DEPTH SHORT_MAX
+//#define MAX_NODES INT_MAX
+#define MAX_NODES 7919 
 #define ON  &on
 #define OFF &off
-#define MAX_DEPTH (1 << 2*8) - 1
-#define MAX_NODES (1 << 2*8) - 1
 
 #endif

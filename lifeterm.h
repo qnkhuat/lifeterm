@@ -9,6 +9,7 @@
 #include <sys/ioctl.h>
 #include <string.h>
 #include "hashlife.h"
+#include "log.h"
 
 
 /*** defines ***/
@@ -46,12 +47,14 @@ struct abuf {
 struct editorConfig { 
 	int cx, cy;
 	int x, y;
+	int ox, oy; // Origin of the root node
 	int screenrows;
 	int screencols;
 	int gridrows;
 	int gridcols;
 	int playing;
 	int **grid;
+	struct Node *root;
 	struct termios orig_termios;
 };
 
@@ -77,7 +80,6 @@ void gridUpdate();
 void gridPlay();
 
 
-
 /*** input ***/
 void editorMoveCursor(int key);
 void editorProcessKeypress();
@@ -89,10 +91,9 @@ void editorDrawStatusBar(struct abuf *ab);
 void editorDrawGrid(struct abuf *ab);
 void editorRefreshScreen();
 
-/*** init ***/
 
+/*** init ***/
 void initEditor();
-void test();
 
 
 /*** Global ***/

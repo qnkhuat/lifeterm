@@ -169,49 +169,19 @@ void gridMark(){
 
 void gridErase(){
 	// TODO : use memset to set values not for loop
-	for (int row = 0; row < E.gridrows; row++){
-		for (int col = 0; col < E.gridcols; col++){
+	for (int col = 0; col < E.gridcols; col++){
+		for (int row = 0; row < E.gridrows; row++){
 			E.grid[row][col] = 0;
 		}
 	}
 }
 
 void gridUpdate(){
-	/***
-	 * 1. Any live cell with fewer than two live neighbours dies, as if by underpopulation.
-	 * 2. Any live cell with two or three live neighbours lives on to the next generation.
-	 * 3. Any live cell with more than three live neighbours dies, as if by overpopulation.
-	 * 4. Any dead cell with exactly three live neighbours becomes a live cell, as if by reproduction.
-	 ***/
-	// TODO: optimize this to not use 2 fors
-	int tempGrid[E.gridrows][E.gridcols];
-	for (int row = 0; row < E.gridrows; row++){
-		for (int col = 0; col < E.gridcols; col++){
-			tempGrid[row][col] = E.grid[row][col];
-		}
-	}
-
-	// TODO: fix to handle case at edges
-	for (int col = 1; col < E.gridcols-1; col++){
-		for (int row = 1; row < E.gridrows-1; row++){
-			int count = tempGrid[row - 1][col - 1] + \
-									tempGrid[row - 1][col] + \
-									tempGrid[row - 1][col + 1] + \
-									tempGrid[row][col - 1] + \
-									tempGrid[row][col + 1] + \
-									tempGrid[row + 1][col - 1] + \
-									tempGrid[row + 1][col] + \
-									tempGrid[row + 1][col + 1];
-			if(count< 2)
-				E.grid[row][col] = 0; 
-			else if(count == 3)
-				E.grid[row][col] = 1; 
-			else if(count > 3)
-				E.grid[row][col] = 0; 
-		}
-	}
+	log_info("Root: Node k=%d, %d x %d, population %d", E.root->k, 1 << E.root->k, 1 << E.root->k, E.root->n); 
+	E.root = advance(E.root, 1);
+	gridErase();
+	expand(E.root, E.ox, E.oy);
 }
-
 
 void gridPlay(){
 	while(1){
@@ -356,7 +326,6 @@ void editorRefreshScreen() {
 	abAppend(&ab, "\x1b[?25l", 6); // Turn off cursor before refresh 
 	abAppend(&ab, "\x1b[H", 3); // clear screen
 
-	//editorDrawRows(&ab); // draw all lines have start with char: ~
 	editorDrawGrid(&ab);
 	editorDrawStatusBar(&ab);
 	char buf[32];
@@ -372,9 +341,7 @@ void editorRefreshScreen() {
 
 
 /*** init ***/
-
 void initEditor(){
-	init();
 	if (getWindowSize(&E.screenrows, &E.screencols) == -1 ) die("WindowSize");
 	E.x = 0;
 	E.y = 0;
@@ -383,26 +350,37 @@ void initEditor(){
 	E.playing = 0;
 	E.gridrows = E.screenrows - 1; // status bar
 	E.gridcols = E.screencols;
+	//E.ox = E.screencols/2; E.oy = E.screenrows/2;
+	E.x = 0; E.oy = 0;
 	
-	E.grid = calloc( E.screencols, sizeof(int *) );
-	for ( size_t i = 0; i < E.screencols; i++ )
-		E.grid[i] = calloc( E.screenrows, sizeof(int) );
+	E.grid = calloc( E.gridrows, sizeof(int *) );
+	for ( int i = 0; i < E.gridrows; i++ )
+		E.grid[i] = calloc( E.gridcols, sizeof(int) );
 
 	gridErase();
 
+	init();
+	int n = 6;
+	int points[6][2] = {{0, 0}, {1, 3}, {2, 3}, {3, 3}, {3, 2}, {2, 1}};
 
-	int points[4][2] = {{0, 0}, {4, 1}, {4, 2}, {4, 3}};
+	Node *root = construct(points, n);
+	E.root = root;
+	expand(E.root, E.ox, E.oy);
 
-	Node *p = construct(points, 4);
-
-	expand(p, E.screencols/2, E.screenrows/2);
-}
-
-void test(){
-	printf("abc\n");
 }
 
 int main(){
+	
+	log_set_quiet(true);
+	FILE *fp = fopen("lifeterm.log", "a+");
+	if (fp==NULL){
+		printf("unable to open file to write log");
+		return 0;
+	}
+	log_add_fp(fp, 0);
+	log_info("Start");
+	log_info("-------------------------------------------------------");
+
 	enableRawMode();
 	initEditor();
 
@@ -413,4 +391,18 @@ int main(){
 
 	return 0;
 }
-	
+
+//int main(){
+//	log_set_quiet(true);
+//	FILE *fp = fopen("lifeterm.log", "a+");
+//	if (fp==NULL){
+//		printf("unable to open file to write log");
+//		return 0;
+//	}
+//	log_add_fp(fp, 0);
+//	log_info("Start");
+//	log_info("-------------------------------------------------------");
+//
+//	init();
+//	test_new_collided();
+//}
