@@ -1,3 +1,4 @@
 clear
-make
-if [ $? -eq 0 ]; then ./lifeterm; fi
+F=lifeterm
+make $F
+if [ $? -eq 0 ]; then ./$F.o; fi

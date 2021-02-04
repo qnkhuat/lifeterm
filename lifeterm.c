@@ -1,54 +1,4 @@
-#include <stdlib.h>
-#include <termios.h>
-#include <errno.h>
-#include <unistd.h>
-#include <stdio.h>
-#include <ctype.h>
-#include <sys/ioctl.h>
-#include <string.h>
-
-
-/*** defines ***/
-#define LIFETERM_VERSION "0.0.0"
-
-#define CTRL_KEY(k) ((k) & 0x1f) // & in this line is bitwise-AND operator
-
-
-/*** Prototypes ***/
-
-void editorRefreshScreen();
-
-enum editorKey {
-	ARROW_LEFT = 1000,
-	ARROW_RIGHT, // = 1001 by convention
-	ARROW_UP,
-	ARROW_DOWN,
-	A_UPPER,
-	D_UPPER,
-	W_UPPER,
-	S_UPPER,
-	STEP,
-	PLAY,
-	MARK,
-	ERASE,
-	QUIT
-};
-
-/*** data ***/
-struct editorConfig { 
-	int cx, cy;
-	int screenrows;
-	int screencols;
-	int gridrows;
-	int gridcols;
-	int playing;
-	int **grid;
-	struct termios orig_termios;
-};
-
-
-struct editorConfig E;
-
+#include "lifeterm.h"
 /*** terminal ***/
 
 void clearScreen() {
@@ -127,14 +77,12 @@ int editorReadKey() {
 		case 'j': return ARROW_DOWN;
 		case 'l': return ARROW_RIGHT;
 
-
 		case ' ':
 		case 'x': 
 							return MARK;
 
 		case 'n':
 		case 'u': return STEP;
-		//case 'p': return PLAY;
 		case 'r': return ERASE;
 
 		case 'Q':
@@ -199,14 +147,6 @@ int getWindowSize(int *rows, int *cols){
 }
 
 /*** append buffer ***/
-struct abuf {
-	char *b;
-	int len;
-};
-
-// acts as constructor for the abuf type
-#define ABUF_INIT {NULL, 0}
-
 void abAppend(struct abuf *ab, const char *c, int len){
 	char *new = realloc(ab->b, ab->len + len);
 	if (new == NULL) return;
@@ -220,56 +160,45 @@ void abFree(struct abuf *ab){
 }
 
 /*** grid operations ***/
+void pushroot(){
+	E.root = centre(E.root);
+	E.ox = E.screencols/2 - ( 1 << (E.root->k - 1) ); E.oy = E.screenrows/2 - ( 1 << (E.root->k - 1) );
+	log_warn("Expanding universe (%d x %d). Depth: %d", 1 << E.root->k, 1 << E.root->k, E.root->k);
+}
+
 void gridMark(){
-	E.grid[E.cy][E.cx] ^= 1;
+
+	while(E.cx - E.ox < 0 || E.cy - E.oy < 0 ||
+		E.cx - E.ox > 1 << E.root->k || E.cy - E.oy > 1 << E.root->k)
+		pushroot();
+
+	mark(E.root, E.cx - E.ox, E.cy - E.oy);
+	gridErase();
+	expand(E.root, E.ox, E.oy);
 }
 
 void gridErase(){
 	// TODO : use memset to set values not for loop
-	for (int row = 0; row < E.gridrows; row++){
-		for (int col = 0; col < E.gridcols; col++){
+	for (int col = 0; col < E.gridcols; col++){
+		for (int row = 0; row < E.gridrows; row++){
 			E.grid[row][col] = 0;
 		}
 	}
 }
 
 void gridUpdate(){
-	/***
-	 * 1. Any live cell with fewer than two live neighbours dies, as if by underpopulation.
-	 * 2. Any live cell with two or three live neighbours lives on to the next generation.
-	 * 3. Any live cell with more than three live neighbours dies, as if by overpopulation.
-	 * 4. Any dead cell with exactly three live neighbours becomes a live cell, as if by reproduction.
-	 ***/
-	// TODO: optimize this to not use 2 fors
-	int tempGrid[E.gridrows][E.gridcols];
-	for (int row = 0; row < E.gridrows; row++){
-		for (int col = 0; col < E.gridcols; col++){
-			tempGrid[row][col] = E.grid[row][col];
-		}
-	}
+	int last_k = E.root->k;
+	log_info("Root: Node k=%d, %d x %d, population %d", E.root->k, 1 << E.root->k, 1 << E.root->k, E.root->n); 
+	E.root = advance(E.root, 1);
+	gridErase();
+	// By default the the upper left of the node will be (0, 0). 
+	// In order to redner consistently we push the orgin to the upper left as the level of Root increase.
+	E.ox = E.screencols/2 - ( 1 << (E.root->k - 1) ); E.oy = E.screenrows/2 - ( 1 << (E.root->k - 1) );
 
-
-	// TODO: fix to handle case at edges
-	for (int col = 1; col < E.gridcols-1; col++){
-		for (int row = 1; row < E.gridrows-1; row++){
-			int count = tempGrid[row - 1][col - 1] + \
-									tempGrid[row - 1][col] + \
-									tempGrid[row - 1][col + 1] + \
-									tempGrid[row][col - 1] + \
-									tempGrid[row][col + 1] + \
-									tempGrid[row + 1][col - 1] + \
-									tempGrid[row + 1][col] + \
-									tempGrid[row + 1][col + 1];
-			if(count< 2)
-				E.grid[row][col] = 0; 
-			else if(count == 3)
-				E.grid[row][col] = 1; 
-			else if(count > 3)
-				E.grid[row][col] = 0; 
-		}
-	}
+	if (last_k != E.root->k)
+		log_warn("Expanding universe (%dx%d). Depth:%d", 1 << E.root->k, 1 << E.root->k, E.root->k);
+	expand(E.root, E.ox, E.oy);
 }
-
 
 void gridPlay(){
 	while(1){
@@ -376,7 +305,7 @@ void editorDrawStatusBar(struct abuf *ab) {
 	char status[120], rstatus[120];
 
 	int len = snprintf(status, sizeof(status), "press q to quit --- wasd|hjkl|ARROWS to navigate (upper case to move faster) --- x|space to mark --- u|n to update");
-	int rlen = snprintf(rstatus, sizeof(rstatus), "%d-%d",E.cx + 1,  E.cy + 1);
+	int rlen = snprintf(rstatus, sizeof(rstatus), "%d-%d",E.cx,  E.cy);
 	if (len > E.screencols) len = E.screencols;
 	abAppend(ab, status, len);
 	while (len < E.screencols) {
@@ -389,7 +318,6 @@ void editorDrawStatusBar(struct abuf *ab) {
 		}
 	}
 	abAppend(ab, "\x1b[m", 3);// switch back to normal color
-	//abAppend(ab, "\r\n", 2);
 }
 
 
@@ -415,7 +343,6 @@ void editorRefreshScreen() {
 	abAppend(&ab, "\x1b[?25l", 6); // Turn off cursor before refresh 
 	abAppend(&ab, "\x1b[H", 3); // clear screen
 
-	//editorDrawRows(&ab); // draw all lines have start with char: ~
 	editorDrawGrid(&ab);
 	editorDrawStatusBar(&ab);
 	char buf[32];
@@ -428,27 +355,50 @@ void editorRefreshScreen() {
 	abFree(&ab);
 }
 
-/*** init ***/
 
+
+/*** init ***/
 void initEditor(){
 	if (getWindowSize(&E.screenrows, &E.screencols) == -1 ) die("WindowSize");
 	E.cx = 0;
 	E.cy = 0;
-	E.playing = 0;
+	E.x = 0;
+	E.y = 0;
 	E.gridrows = E.screenrows - 1; // status bar
 	E.gridcols = E.screencols;
-
-	// init grid
-	E.grid = malloc(E.gridrows* sizeof(int *));
-	for(int i = 0; i < E.gridcols; i++) {
-		E.grid[i] = malloc(E.gridcols* sizeof(int));
-	}
+	//E.x = 0; E.oy = 0;
+	
+	E.grid = calloc( E.gridrows, sizeof(int *) );
+	for ( int i = 0; i < E.gridrows; i++ )
+		E.grid[i] = calloc( E.gridcols, sizeof(int) );
 
 	gridErase();
-	
+
+	init();
+	int n = 5;
+	int points[5][2] = {{0, 0}, {0, 1}, {0, 2}, {1, 0}, {2, 1}};
+
+	Node *root = construct(points, n);
+	//E.root = get_zero(1);
+	E.root = root;
+	// Move the origin of root so the grid is centered on screen
+	E.ox = E.screencols/2 - ( 1 << (E.root->k - 1) ); 
+	E.oy = E.screenrows/2 - ( 1 << (E.root->k - 1) );
+	expand(E.root, E.ox, E.oy);
 }
 
 int main(){
+	
+	log_set_quiet(true);
+	FILE *fp = fopen("lifeterm.log", "a+");
+	if (fp==NULL){
+		printf("unable to open file to write log");
+		return 0;
+	}
+	log_add_fp(fp, 3);
+	log_info("Start");
+	log_info("-------------------------------------------------------");
+
 	enableRawMode();
 	initEditor();
 
@@ -459,3 +409,4 @@ int main(){
 
 	return 0;
 }
+
