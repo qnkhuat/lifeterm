@@ -48,21 +48,17 @@ Node *newnode(Node *a, Node *b, Node *c, Node *d){
 	}
 	
 	hashtab[h] = node; // push in to hashtable
-	log_info("Create new node: Node k=%d, %d x %d, population %d", node->k, 1 << node->k, 1 << node->k, node->n); 
+	log_info("Create new node: Node k=%d, %d x %d, population %d at hash:%d", node->k, 1 << node->k, 1 << node->k, node->n, h); 
 	return node;
 }
 
 Node *find_node(Node *a, Node *b, Node *c, Node *d){
 	int h = node_hash(a, b, c, d);
 	Node *p;
-	for (p=hashtab[h]; p; p = p->next) { /* make sure to compare a first */
-		if (p->a == a && p->b == b && p->c == c && p->d == d) {// In case hash collision compare its value
-			log_info("Find: hash collided");
-			return p ;
-		}
-	}
-	p = NULL;
-	return p;
+	for (p=hashtab[h]; p; p = p->next)  /* make sure to compare a first */
+		if (p->a == a && p->b == b && p->c == c && p->d == d) // In case hash collision compare its value
+			return p;
+	return p; // NULL
 }
 
 Node *get_zero(int k){
@@ -136,7 +132,7 @@ Node *construct(int points[][2], int n){
 			Node *nodek = find_node(a, b, c, d);
 			if (nodek == NULL) // create new if does not exist
 				nodek = newnode(a, b, c, d);
-			next_level[m] = (MapNode){.x = x >> 1, .y = y >> 1, . p = nodek}; // store a list of all pattern in this level
+			next_level[m] = (MapNode){.x = x >> 1, .y = y >> 1, .p = nodek}; // store a list of all pattern in this level
 			m++;
 		}
 		n = m; k++;
@@ -152,42 +148,19 @@ Node *construct(int points[][2], int n){
 }
 
 
-void mark(Node *node, int x, int y, int mx, int my){
-	// (mx, my) are not in this node
-	int size = 1 << node->k;
-	if (mx < x || mx > x + size || my < y || my > y + size)
-		return;
-
-	// base case
-	if (node->k == 1){
-		if(x == mx && y == my){
-			E.grid[x][y] = ~E.grid[x][y]; // flip it boiss
-		}
-		return;
-	}
-	// TODO: if the marked node is out of current size => expand
-
-	int offset = 1 << (node->k - 1);
-	mark(node->a, x, y, mx, my);
-	mark(node->b, x + offset, y, mx, my);
-	mark(node->c, x, y + offset, mx, my);
-	mark(node->d, x + offset, y + offset, mx ,my);
-
-}
-
 void expand(Node *node, int x, int y){
 	if (node->n == 0)
 		return;
 
-	int size = 1 << node->k;
 	// clip only points in view
-	if (x + size <= E.x || x >= E.x + E.screencols || y + size <= E.y || y >= E.y + E.screenrows)
+	int size = 1 << node->k;
+	if (x + size <= 0 || x >= E.gridcols|| y + size <= 0 || y >= E.gridrows)
 		return;
 
 	// base case
 	if (node->k == 0){
 		E.grid[y][x] = 1;
-		log_info("expand x:%d, y:%d", x, y);
+		log_info("expand x:%d, y:%d, Ox:%d, Oy:%d", x, y, E.ox, E.oy);
 		return;
 	}
 
@@ -196,6 +169,72 @@ void expand(Node *node, int x, int y){
 	expand(node->b, x + offset, y);
 	expand(node->c, x, y + offset);
 	expand(node->d, x + offset, y + offset);
+}
+
+void mark(Node *p, int x, int y){
+
+	Node *n = p;
+	MapNode *nodetab = (MapNode *)calloc((p->k+1), sizeof (MapNode)); 
+	
+	int size;
+	int x_1, y_1; // store x and y at level 1
+	nodetab[n->k] = (MapNode){.p = p, .x = 0, .y = 0};  // store the root
+	for (int k = p->k; k >= 2; k--){
+		size = 1 << (n->k - 1);
+		if ( x < size ){
+			if ( y < size ){
+				n = n->a;
+				nodetab[n->k] = (MapNode){.p = n, .x = 0, .y = 0}; 
+			} else {
+				n = n->c;
+				nodetab[n->k] = (MapNode){.p = n, .x = 0, .y = 1}; 
+				y = y - size;
+			}
+		} else {
+			if ( y < size ){
+				n = n->b;
+				nodetab[n->k] = (MapNode){.p = n, .x = 1, .y = 0}; 
+				x = x - size;
+			} else {
+				n = n->d;
+				nodetab[n->k] = (MapNode){.p = n, .x = 1, .y = 1}; 
+				x = x - size;
+				y = y - size;
+			}
+		}
+		if(n->k == 1){
+			x_1 = x;
+			y_1 = y;
+		}
+
+	}
+	n = nodetab[1].p;
+	size = 1 << (n->k - 1);
+	// x, y now is at level 1
+	Node *node2x2 = join(
+			x_1 == 0 && y_1 == 0 ? (n->a->n ==0 ? ON : OFF) : n->a,
+			x_1 == 1 && y_1 == 0 ? (n->b->n ==0 ? ON : OFF) : n->b,
+			x_1 == 0 && y_1 == 1 ? (n->c->n ==0 ? ON : OFF) : n->c,
+			x_1 == 1 && y_1 == 1 ? (n->d->n ==0 ? ON : OFF) : n->d
+			);
+
+	nodetab[1].p = node2x2;
+
+	// Recreate the tree from bottom up. reuse the node that is not-modified
+	for (int k = 1; k < p->k; k++){
+		MapNode *cur = &nodetab[k];
+		MapNode *next= &nodetab[k+1];
+		next->p = join(
+				cur->x == 0 && cur->y == 0 ? cur->p : next->p->a,
+				cur->x == 1 && cur->y == 0 ? cur->p : next->p->b,
+				cur->x == 0 && cur->y == 1 ? cur->p : next->p->c,
+				cur->x == 1 && cur->y == 1 ? cur->p : next->p->d
+				);
+	}
+
+	n = nodetab[p->k].p;
+	E.root = nodetab[p->k].p;
+	free(nodetab);
 }
 
 Node *successor(Node *p, int j){
@@ -249,9 +288,9 @@ Node *advance(Node *p, int n){
 	// TODO : add advance expansion
 	if (n==0)
 		return p;
-	p = centre(p); // p->k+=1
+	p = pad(p); // p->k+=1
 	p = successor(p, 0); // p->k-=1
-	return p;
+	return crop(p);
 }
 
 
@@ -349,9 +388,9 @@ int next_prime(int i) {
 	for (;; i+=2) {
 		for (j=3; j*j<=i; j+=2)
 			if (i % j == 0)
-				break ;
+				break;
 		if (j*j > i)
-			return i ;
+			return i;
 	}
 }
 
@@ -370,7 +409,6 @@ void test_construct(){
 	Node *p = construct(points, n);
 	print_node(p);
 }
-
 
 
 //void test_expand(){
@@ -483,7 +521,6 @@ void init_e(){
 	E.y = 0;
 	E.cx = 0;
 	E.cy = 0;
-	E.playing = 0;
 	E.gridrows=58;
 	E.gridcols=238;
 	E.screenrows=58;

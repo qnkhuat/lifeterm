@@ -13,7 +13,7 @@
 
 /*** Structs ***/
 typedef struct Node Node;
-struct Node {
+typedef struct Node {
 	unsigned int n; // number of live cells. Max 4,294,967,295
 	unsigned short k; // level. Max 65,535
 	Node *next; // Chaining to handle hash collision
@@ -36,8 +36,8 @@ unsigned int node_hash(Node *a, Node *b, Node *c, Node *d);
 Node *find_node(Node *a, Node *b, Node *c, Node *d);
 Node *join(const Node *a, const Node *b, const Node *c, const Node *d);
 Node *construct(int points[][2], int n);
+void mark(Node *node, int x, int y);
 void expand(Node *node, int x, int y);
-void mark(Node *node, int x, int y, int mx, int my);
 
 // For Update
 Node *successor(Node *p, int j);

@@ -45,9 +45,9 @@ struct abuf {
 
 
 struct editorConfig { 
-	int cx, cy;
-	int x, y;
+	int cx, cy; // Position of Cursor
 	int ox, oy; // Origin of the root node
+	int x, y;
 	int screenrows;
 	int screencols;
 	int gridrows;

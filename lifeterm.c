@@ -77,14 +77,12 @@ int editorReadKey() {
 		case 'j': return ARROW_DOWN;
 		case 'l': return ARROW_RIGHT;
 
-
 		case ' ':
 		case 'x': 
 							return MARK;
 
 		case 'n':
 		case 'u': return STEP;
-		//case 'p': return PLAY;
 		case 'r': return ERASE;
 
 		case 'Q':
@@ -149,7 +147,6 @@ int getWindowSize(int *rows, int *cols){
 }
 
 /*** append buffer ***/
-
 void abAppend(struct abuf *ab, const char *c, int len){
 	char *new = realloc(ab->b, ab->len + len);
 	if (new == NULL) return;
@@ -163,8 +160,21 @@ void abFree(struct abuf *ab){
 }
 
 /*** grid operations ***/
+void pushroot(){
+	E.root = centre(E.root);
+	E.ox = E.screencols/2 - ( 1 << (E.root->k - 1) ); E.oy = E.screenrows/2 - ( 1 << (E.root->k - 1) );
+	log_warn("Expanding universe (%d x %d). Depth: %d", 1 << E.root->k, 1 << E.root->k, E.root->k);
+}
+
 void gridMark(){
-	E.grid[E.cy][E.cx] ^= 1;
+
+	while(E.cx - E.ox < 0 || E.cy - E.oy < 0 ||
+		E.cx - E.ox > 1 << E.root->k || E.cy - E.oy > 1 << E.root->k)
+		pushroot();
+
+	mark(E.root, E.cx - E.ox, E.cy - E.oy);
+	gridErase();
+	expand(E.root, E.ox, E.oy);
 }
 
 void gridErase(){
@@ -177,9 +187,16 @@ void gridErase(){
 }
 
 void gridUpdate(){
+	int last_k = E.root->k;
 	log_info("Root: Node k=%d, %d x %d, population %d", E.root->k, 1 << E.root->k, 1 << E.root->k, E.root->n); 
 	E.root = advance(E.root, 1);
 	gridErase();
+	// By default the the upper left of the node will be (0, 0). 
+	// In order to redner consistently we push the orgin to the upper left as the level of Root increase.
+	E.ox = E.screencols/2 - ( 1 << (E.root->k - 1) ); E.oy = E.screenrows/2 - ( 1 << (E.root->k - 1) );
+
+	if (last_k != E.root->k)
+		log_warn("Expanding universe (%dx%d). Depth:%d", 1 << E.root->k, 1 << E.root->k, E.root->k);
 	expand(E.root, E.ox, E.oy);
 }
 
@@ -288,7 +305,7 @@ void editorDrawStatusBar(struct abuf *ab) {
 	char status[120], rstatus[120];
 
 	int len = snprintf(status, sizeof(status), "press q to quit --- wasd|hjkl|ARROWS to navigate (upper case to move faster) --- x|space to mark --- u|n to update");
-	int rlen = snprintf(rstatus, sizeof(rstatus), "%d-%d",E.cx + 1,  E.cy + 1);
+	int rlen = snprintf(rstatus, sizeof(rstatus), "%d-%d",E.cx,  E.cy);
 	if (len > E.screencols) len = E.screencols;
 	abAppend(ab, status, len);
 	while (len < E.screencols) {
@@ -343,15 +360,13 @@ void editorRefreshScreen() {
 /*** init ***/
 void initEditor(){
 	if (getWindowSize(&E.screenrows, &E.screencols) == -1 ) die("WindowSize");
-	E.x = 0;
-	E.y = 0;
 	E.cx = 0;
 	E.cy = 0;
-	E.playing = 0;
+	E.x = 0;
+	E.y = 0;
 	E.gridrows = E.screenrows - 1; // status bar
 	E.gridcols = E.screencols;
-	//E.ox = E.screencols/2; E.oy = E.screenrows/2;
-	E.x = 0; E.oy = 0;
+	//E.x = 0; E.oy = 0;
 	
 	E.grid = calloc( E.gridrows, sizeof(int *) );
 	for ( int i = 0; i < E.gridrows; i++ )
@@ -360,13 +375,16 @@ void initEditor(){
 	gridErase();
 
 	init();
-	int n = 6;
-	int points[6][2] = {{0, 0}, {1, 3}, {2, 3}, {3, 3}, {3, 2}, {2, 1}};
+	int n = 5;
+	int points[5][2] = {{0, 0}, {0, 1}, {0, 2}, {1, 0}, {2, 1}};
 
 	Node *root = construct(points, n);
+	//E.root = get_zero(1);
 	E.root = root;
+	// Move the origin of root so the grid is centered on screen
+	E.ox = E.screencols/2 - ( 1 << (E.root->k - 1) ); 
+	E.oy = E.screenrows/2 - ( 1 << (E.root->k - 1) );
 	expand(E.root, E.ox, E.oy);
-
 }
 
 int main(){
@@ -377,7 +395,7 @@ int main(){
 		printf("unable to open file to write log");
 		return 0;
 	}
-	log_add_fp(fp, 0);
+	log_add_fp(fp, 3);
 	log_info("Start");
 	log_info("-------------------------------------------------------");
 
@@ -392,17 +410,3 @@ int main(){
 	return 0;
 }
 
-//int main(){
-//	log_set_quiet(true);
-//	FILE *fp = fopen("lifeterm.log", "a+");
-//	if (fp==NULL){
-//		printf("unable to open file to write log");
-//		return 0;
-//	}
-//	log_add_fp(fp, 0);
-//	log_info("Start");
-//	log_info("-------------------------------------------------------");
-//
-//	init();
-//	test_new_collided();
-//}
