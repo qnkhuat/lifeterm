@@ -46,7 +46,7 @@ Node *newnode(Node *a, Node *b, Node *c, Node *d){
 		log_info("Create: Hash collided");
 		node->next = hashtab[h];
 	}
-	
+
 	hashtab[h] = node; // push in to hashtable
 	log_info("Create new node: Node k=%d, %d x %d, population %d at hash:%d", node->k, 1 << node->k, 1 << node->k, node->n, h); 
 	return node;
@@ -174,7 +174,7 @@ void mark(Node *p, int x, int y){
 
 	Node *n = p;
 	MapNode *nodetab = (MapNode *)calloc((p->k+1), sizeof (MapNode)); 
-	
+
 	int size;
 	int x_1, y_1; // store x and y at level 1
 	nodetab[n->k] = (MapNode){.p = p, .x = 0, .y = 0};  // store the root
@@ -256,7 +256,7 @@ Node *successor(Node *p, int j){
 		result = life4x4(p);
 	else {
 		j = j <= 0 ? p->k - 2 : min(j, p->k - 2);
-		
+
 		Node *c1 = successor(join(p->a->a, p->a->b, p->a->c, p->a->d), j);
 		Node *c2 = successor(join(p->a->b, p->b->a, p->a->d, p->b->c), j);
 		Node *c3 = successor(join(p->b->a, p->b->b, p->b->c, p->b->d), j);
@@ -267,37 +267,44 @@ Node *successor(Node *p, int j){
 		Node *c8 = successor(join(p->c->b, p->d->a, p->c->d, p->d->c), j);
 		Node *c9 = successor(join(p->d->a, p->d->b, p->d->c, p->d->d), j);
 		if (j < p->k - 2){
+			//log_info("IN: j:%d, p->k:%d");
 			result = join(
 					join(c1->d, c2->c, c4->b, c5->a),
 					join(c2->d, c3->c, c5->b, c6->a),
 					join(c4->d, c5->c, c7->b, c8->a),
 					join(c5->d, c6->c, c8->b, c9->a));
 		} else {
+			//log_info("Out: j:%d, p->k:%d");
 			result = join(
 					successor(join(c1, c2, c4, c5), j),
 					successor(join(c2, c3, c5, c6), j),
 					successor(join(c4, c5, c7, c8), j),
 					successor(join(c5, c6, c8, c9), j));
+
 		}
 	}
 	return result;
 }
 
+
 Node *advance(Node *p, int n){
 	if (n==0)
 		return p;
 
-	int nbits;
+	int nbits = 0;
 	int bits[n];
-	for(nbits = 0; n > 0; nbits++){
-		bits[nbits] = n & 1;
+	while (n>0){
+		bits[nbits] = n &1;
 		n = n >> 1;
 		p = centre(p);
+		nbits++;
 	}
+	p = centre(p); // Another extra at last. Don't know why but it works
+
 	
 	for (int i = 0; i < nbits; i++){
-		int j = nbits - i - 1;
-		if (bits[nbits-i]){
+		int j = nbits - i;
+		if (bits[nbits - i - 1]){
 			p = successor(p, j);
 		}
 	}

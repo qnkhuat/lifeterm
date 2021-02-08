@@ -189,7 +189,7 @@ void gridErase(){
 void gridUpdate(){
 	int last_k = E.root->k;
 	log_info("Root: Node k=%d, %d x %d, population %d", E.root->k, 1 << E.root->k, 1 << E.root->k, E.root->n); 
-	E.root = advance(E.root, 100);
+	E.root = advance(E.root, 1);
 	gridErase();
 	// By default the the upper left of the node will be (0, 0). 
 	// In order to redner consistently we push the orgin to the upper left as the level of Root increase.
@@ -397,7 +397,7 @@ int main(){
 		printf("unable to open file to write log");
 		return 0;
 	}
-	log_add_fp(fp, 0);
+	log_add_fp(fp, 3);
 	log_info("Start");
 	log_info("-------------------------------------------------------");
 
