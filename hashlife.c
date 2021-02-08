@@ -109,23 +109,22 @@ Node *construct(int points[][2], int n){
 			Node *a = z, *b = z, *c = z, *d = z ;
 			int x = p.x - (int)(p.x & 1); int y = p.y - (int)(p.y & 1); // Move index to the start of its block
 			for (int j = i; j < n; j++){ // Find all points that inside this 2x2 block
-				MapNode pp = pattern[j];
-				if (pp.p == NULL)
+				MapNode *pp = &pattern[j];
+				if (pp->p == NULL)
 					continue;
 
-				if (pp.x == x && pp.y == y){
-					a = pp.p;
-					// TODO: Are there a way we can remove pointer using pp instead of original pattern[j]?
-					pattern[j].p = NULL;
-				} else if (pp.x == x + 1 && pp.y == y){
-					b = pp.p;
-					pattern[j].p = NULL;
-				} else if (pp.x == x && pp.y == y + 1){
-					c = pp.p;
-					pattern[j].p = NULL;
-				} else if (pp.x == x + 1 && pp.y == y + 1){
-					d = pp.p;
-					pattern[j].p = NULL;
+				if (pp->x == x && pp->y == y){
+					a = pp->p;
+					pp->p = NULL;
+				} else if (pp->x == x + 1 && pp->y == y){
+					b = pp->p;
+					pp->p = NULL;
+				} else if (pp->x == x && pp->y == y + 1){
+					c = pp->p;
+					pp->p = NULL;
+				} else if (pp->x == x + 1 && pp->y == y + 1){
+					d = pp->p;
+					pp->p = NULL;
 				}
 			}
 
@@ -210,7 +209,6 @@ void mark(Node *p, int x, int y){
 	}
 	n = nodetab[1].p;
 	size = 1 << (n->k - 1);
-	// x, y now is at level 1
 	Node *node2x2 = join(
 			x_1 == 0 && y_1 == 0 ? (n->a->n ==0 ? ON : OFF) : n->a,
 			x_1 == 1 && y_1 == 0 ? (n->b->n ==0 ? ON : OFF) : n->b,
@@ -250,14 +248,15 @@ Node *successor(Node *p, int j){
 	 *  +--+--+--+--+
 	 */
 
-	assert(p->k >=2);
+	assert(p->k >= 2);
 	Node *result;
-	if (p->n ==0)
+	if (p->n == 0)
 		result = p->a;
 	else if (p->k == 2)
 		result = life4x4(p);
 	else {
-		j = j < p->k - 2 ? j : p->k -2;
+		j = j <= 0 ? p->k - 2 : min(j, p->k - 2);
+		
 		Node *c1 = successor(join(p->a->a, p->a->b, p->a->c, p->a->d), j);
 		Node *c2 = successor(join(p->a->b, p->b->a, p->a->d, p->b->c), j);
 		Node *c3 = successor(join(p->b->a, p->b->b, p->b->c, p->b->d), j);
@@ -275,21 +274,33 @@ Node *successor(Node *p, int j){
 					join(c5->d, c6->c, c8->b, c9->a));
 		} else {
 			result = join(
-					successor(join(c1->d, c2->c, c4->b, c5->a), j),
-					successor(join(c2->d, c3->c, c5->b, c6->a), j),
-					successor(join(c4->d, c5->c, c7->b, c8->a), j),
-					successor(join(c5->d, c6->c, c8->b, c9->a), j));
+					successor(join(c1, c2, c4, c5), j),
+					successor(join(c2, c3, c5, c6), j),
+					successor(join(c4, c5, c7, c8), j),
+					successor(join(c5, c6, c8, c9), j));
 		}
 	}
 	return result;
 }
 
 Node *advance(Node *p, int n){
-	// TODO : add advance expansion
 	if (n==0)
 		return p;
-	p = pad(p); // p->k+=1
-	p = successor(p, 0); // p->k-=1
+
+	int nbits;
+	int bits[n];
+	for(nbits = 0; n > 0; nbits++){
+		bits[nbits] = n & 1;
+		n = n >> 1;
+		p = centre(p);
+	}
+	
+	for (int i = 0; i < nbits; i++){
+		int j = nbits - i - 1;
+		if (bits[nbits-i]){
+			p = successor(p, j);
+		}
+	}
 	return crop(p);
 }
 

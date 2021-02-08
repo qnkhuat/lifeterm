@@ -68,5 +68,6 @@ void test_new_collided();
 #define MAX_NODES 7919 
 #define ON  &on
 #define OFF &off
+#define min(a, b) (((a) < (b)) ? (a) : (b))
 
 #endif
