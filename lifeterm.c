@@ -172,9 +172,8 @@ void gridMark(){
 		E.cx - E.ox > 1 << E.root->k || E.cy - E.oy > 1 << E.root->k)
 		pushroot();
 
-	mark(E.root, E.cx - E.ox, E.cy - E.oy);
-	gridErase();
-	expand(E.root, E.ox, E.oy);
+	mark(E.root, E.cx - E.ox - E.offx, E.cy - E.oy - E.offy);
+	gridRender();
 }
 
 void gridErase(){
@@ -190,14 +189,9 @@ void gridUpdate(){
 	int last_k = E.root->k;
 	log_info("Root: Node k=%d, %d x %d, population %d", E.root->k, 1 << E.root->k, 1 << E.root->k, E.root->n); 
 	E.root = advance(E.root, 1);
-	gridErase();
-	// By default the the upper left of the node will be (0, 0). 
-	// In order to redner consistently we push the orgin to the upper left as the level of Root increase.
-	E.ox = E.screencols/2 - ( 1 << (E.root->k - 1) ); E.oy = E.screenrows/2 - ( 1 << (E.root->k - 1) );
-
 	if (last_k != E.root->k)
 		log_warn("Expanding universe (%dx%d). Depth:%d", 1 << E.root->k, 1 << E.root->k, E.root->k);
-	expand(E.root, E.ox, E.oy);
+	gridRender();
 }
 
 void gridPlay(){
@@ -212,39 +206,66 @@ void gridPlay(){
 	}
 }
 
+
+void gridRender(){
+	// By default the the upper left of the node will be (0, 0). 
+	// In order to redner consistently we push the orgin to the upper left as the level of Root increase.
+	gridErase();
+	E.ox = E.screencols/2 - ( 1 << (E.root->k - 1) ); E.oy = E.screenrows/2 - ( 1 << (E.root->k - 1) );
+	expand(E.root, E.ox + E.offx, E.oy + E.offy);
+}
+
 /*** input ***/
 
 void editorMoveCursor(int key){
 	switch(key){
 		case ARROW_LEFT:
 			if (E.cx!=0) E.cx--;
+			else E.offx++;
 			break;
 		case ARROW_RIGHT:
-			if (E.cx!= E.screencols-1) E.cx++;
+			if (E.cx!= E.gridcols-1) E.cx++;
+			else E.offx--;
 			break;
 		case ARROW_UP:
 			if(E.cy!=0)	E.cy--;
+			else E.offy++;
 			break;
 		case ARROW_DOWN:
 			if (E.cy != E.gridrows-1) E.cy++;
+			else E.offy--;
 			break;
 		case A_UPPER:
-			if (E.cx -10 <= 0) E.cx = 0;
+			if (E.cx < 10){
+				E.offx += 10 - E.cx;
+				E.cx = 0;
+			}
 			else E.cx -= 10;
 			break;
 		case D_UPPER:
-			if (E.cx + 10 >= E.screencols) E.cx = E.screencols-1;
+			if (E.cx + 10 >= E.gridcols){
+				E.offx -= 10 - (E.gridcols-1 - E.cx);
+				E.cx = E.gridcols- 1;
+			}
 			else E.cx += 10;
 			break;
 		case W_UPPER:
-			if (E.cy - 10 <= 0) E.cy = 0;
+			if (E.cy < 10){
+				E.offy += 10 - E.cy;
+				E.cy = 0;
+			}
 			else E.cy-=10;
 			break;
 		case S_UPPER:
-			if (E.cy + 10 >= E.screenrows) E.cy = E.gridrows-1;
+			if (E.cy + 10 >= E.gridrows){
+				E.offy -= 10 - (E.gridrows-1 - E.cy);
+				E.cy = E.gridrows - 1;
+			}
 			else E.cy+=10;
 			break;
 	}
+
+	gridRender();
 }
 
 void editorProcessKeypress(){
@@ -360,13 +381,10 @@ void editorRefreshScreen() {
 /*** init ***/
 void initEditor(){
 	if (getWindowSize(&E.screenrows, &E.screencols) == -1 ) die("WindowSize");
-	E.cx = 0;
-	E.cy = 0;
-	E.x = 0;
-	E.y = 0;
+	E.cx = 0; E.cy = 0;
+	E.offx = 0; E.offy = 10;
 	E.gridrows = E.screenrows - 1; // status bar
 	E.gridcols = E.screencols;
-	//E.x = 0; E.oy = 0;
 	
 	E.grid = calloc( E.gridrows, sizeof(int *) );
 	for ( int i = 0; i < E.gridrows; i++ )
@@ -381,10 +399,9 @@ void initEditor(){
 	Node *root = construct(points, n);
 	//E.root = get_zero(1);
 	E.root = root;
-	// Move the origin of root so the grid is centered on screen
-	E.ox = E.screencols/2 - ( 1 << (E.root->k - 1) ); 
-	E.oy = E.screenrows/2 - ( 1 << (E.root->k - 1) );
-	expand(E.root, E.ox, E.oy);
+	gridRender();
+
+	log_warn("Universe Created: (%d x %d). Depth: %d", 1 << E.root->k, 1 << E.root->k, E.root->k);
 }
 
 int main(){

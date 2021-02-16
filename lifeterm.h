@@ -47,7 +47,7 @@ struct abuf {
 struct editorConfig { 
 	int cx, cy; // Position of Cursor
 	int ox, oy; // Origin of the root node
-	int x, y;
+	int offx, offy; // Offset of the universe when move to the edges
 	int screenrows;
 	int screencols;
 	int gridrows;
@@ -77,6 +77,7 @@ void abFree(struct abuf *ab);
 void gridMark();
 void gridErase();
 void gridUpdate();
+void gridRender();
 void gridPlay();
 
 
