@@ -4,6 +4,8 @@ Game of life editor right on your terminal because why not? 🤷
 This is a work in progress, there are tons of thing to improve.
 ![](./assets/demo.png)
 
+I use the [hashlife](https://en.wikipedia.org/wiki/Hashlife) algorithm to represent the universe and update cells.
+
 # How to 
 ### RUN
 > The grid is based on the screen size of your terminal, so make sure you larger your screen before run
@@ -27,7 +29,8 @@ This is a work in progress, there are tons of thing to improve.
 For the best experience, Use the font [square](/assets/square.ttf) on your terminal, It has square cells. 
 
 # Todo
+- [x] Infinite grid / Dynamic size grid
 - [ ] Square grid cell without font
 - [ ] Add load/save game
-- [ ] Infinite grid / Dynamic size grid
+
 
