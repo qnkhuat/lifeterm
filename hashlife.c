@@ -508,9 +508,9 @@ void test_pad(){
 
 
 void test_successor(){
-	int points[4][2] = {{0, 0}, {4, 1}, {4, 2}, {4, 3}};
+	int points[5][2] = {{0, 0}, {4, 1}, {4, 2}, {4, 3}, {10, 10}};
 
-	Node *p = construct(points, 4);
+	Node *p = construct(points, 5);
 	log_info("Before update: "); print_node(p);
 	expand(p, 0, 0);
 	p = successor(p, 0);
@@ -535,8 +535,6 @@ void test_new_collided(){
 }
 
 void init_e(){
-	E.x = 0;
-	E.y = 0;
 	E.cx = 0;
 	E.cy = 0;
 	E.gridrows=58;
