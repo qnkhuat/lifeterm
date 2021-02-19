@@ -24,6 +24,7 @@ I use the [hashlife](https://en.wikipedia.org/wiki/Hashlife) algorithm to repres
 | u, n     | Next generation           |
 | r, R     | Refresh           |
 | q        | Quit                      |
+| i/I      | Increase/Decrease Step size by factor of 2|
 
 ### Font
 For the best experience, Use the font [square](/assets/square.ttf) on your terminal, It has square cells. 
