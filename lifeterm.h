@@ -8,6 +8,7 @@
 #include <ctype.h>
 #include <sys/ioctl.h>
 #include <string.h>
+#include <math.h>
 #include "hashlife.h"
 #include "log.h"
 
@@ -31,6 +32,8 @@ enum editorKey {
 	D_UPPER,
 	W_UPPER,
 	S_UPPER,
+	INC_BASE,
+	DEC_BASE,
 	STEP,
 	PLAY,
 	MARK,
@@ -48,6 +51,7 @@ struct editorConfig {
 	int cx, cy; // Position of Cursor
 	int ox, oy; // Origin of the root node
 	int offx, offy; // Offset of the universe when move to the edges
+	int basestep; // one update will be 2^basestep generation
 	int screenrows;
 	int screencols;
 	int gridrows;
@@ -74,11 +78,13 @@ void abFree(struct abuf *ab);
 
 
 /*** grid operations ***/
+void pushroot();
 void gridMark();
 void gridErase();
 void gridUpdate();
 void gridRender();
 void gridPlay();
+void changeBasestep(int order);
 
 
 /*** input ***/

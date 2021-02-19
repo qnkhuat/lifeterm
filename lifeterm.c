@@ -77,6 +77,9 @@ int editorReadKey() {
 		case 'j': return ARROW_DOWN;
 		case 'l': return ARROW_RIGHT;
 
+		case 'i': return INC_BASE;
+		case 'I': return DEC_BASE;
+
 		case ' ':
 		case 'x': 
 							return MARK;
@@ -188,7 +191,8 @@ void gridErase(){
 void gridUpdate(){
 	int last_k = E.root->k;
 	log_info("Root: Node k=%d, %d x %d, population %d", E.root->k, 1 << E.root->k, 1 << E.root->k, E.root->n); 
-	E.root = advance(E.root, 1);
+	int step = pow(2, E.basestep);
+	E.root = advance(E.root, step);
 	if (last_k != E.root->k)
 		log_warn("Expanding universe (%dx%d). Depth:%d", 1 << E.root->k, 1 << E.root->k, E.root->k);
 	gridRender();
@@ -213,6 +217,17 @@ void gridRender(){
 	gridErase();
 	E.ox = E.screencols/2 - ( 1 << (E.root->k - 1) ); E.oy = E.screenrows/2 - ( 1 << (E.root->k - 1) );
 	expand(E.root, E.ox + E.offx, E.oy + E.offy);
+}
+
+
+void changeBasestep(int order){
+	// Can't decrease anymore
+	if (E.basestep == 0 && order != 1)
+		return;
+	// 1 to incerase
+	// else decrease speed
+	E.basestep = order == 1 ? E.basestep + 1 : E.basestep - 1;
+	log_info("%s base step to: 2^%d", order == 1 ? "Increased" : "Decreased", E.basestep);
 }
 
 /*** input ***/
@@ -291,6 +306,13 @@ void editorProcessKeypress(){
 			editorMoveCursor(c);
 			break;
 
+		case INC_BASE:
+			changeBasestep(1);
+			break;
+		case DEC_BASE:
+			changeBasestep(0);
+			break;
+
 		case MARK:
 			gridMark();
 			break;
@@ -303,7 +325,6 @@ void editorProcessKeypress(){
 			break;
 
 	}
-
 }
 
 /*** output ***/
@@ -326,7 +347,7 @@ void editorDrawStatusBar(struct abuf *ab) {
 	char status[120], rstatus[120];
 
 	int len = snprintf(status, sizeof(status), "press q to quit --- wasd|hjkl|ARROWS to navigate (upper case to move faster) --- x|space to mark --- u|n to update");
-	int rlen = snprintf(rstatus, sizeof(rstatus), "%d-%d",E.cx,  E.cy);
+	int rlen = snprintf(rstatus, sizeof(rstatus), "Step: 2^%d | %d-%d",E.basestep, E.cx,  E.cy);
 	if (len > E.screencols) len = E.screencols;
 	abAppend(ab, status, len);
 	while (len < E.screencols) {
@@ -385,6 +406,7 @@ void initEditor(){
 	E.offx = 0; E.offy = 10;
 	E.gridrows = E.screenrows - 1; // status bar
 	E.gridcols = E.screencols;
+	E.basestep= 0;
 	
 	E.grid = calloc( E.gridrows, sizeof(int *) );
 	for ( int i = 0; i < E.gridrows; i++ )
@@ -412,7 +434,7 @@ int main(){
 		printf("unable to open file to write log");
 		return 0;
 	}
-	log_add_fp(fp, 3);
+	log_add_fp(fp, 3); // 3 is error, 0 is info
 	log_info("Start");
 	log_info("-------------------------------------------------------");
 

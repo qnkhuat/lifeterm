@@ -2,8 +2,8 @@
 *.swp
 *.swo
 
-voila.c
-./lifeterm
+# Generated files
+*.log
 
 # open sources
 repos
