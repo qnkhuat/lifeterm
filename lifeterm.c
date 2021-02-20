@@ -77,6 +77,9 @@ int editorReadKey() {
 		case 'j': return ARROW_DOWN;
 		case 'l': return ARROW_RIGHT;
 
+		case 'i': return INC_BASE;
+		case 'I': return DEC_BASE;
+
 		case ' ':
 		case 'x': 
 							return MARK;
@@ -122,7 +125,7 @@ int getCursorPosition(int *rows, int*cols){
 
 	while(i < sizeof(buf) -1 ) { // after sending command. This is how we read the response
 		// The response will have format : rows;colsR
-		if(read(STDIN_FILENO, &buf[i], 1) != 1) break;
+		if (read(STDIN_FILENO, &buf[i], 1) != 1) break;
 		if (buf[i] == 'R') break; // break until we read the R char
 		i++;
 	}
@@ -167,7 +170,6 @@ void pushroot(){
 }
 
 void gridMark(){
-
 	while(E.cx - E.ox < 0 || E.cy - E.oy < 0 ||
 		E.cx - E.ox > 1 << E.root->k || E.cy - E.oy > 1 << E.root->k)
 		pushroot();
@@ -188,7 +190,8 @@ void gridErase(){
 void gridUpdate(){
 	int last_k = E.root->k;
 	log_info("Root: Node k=%d, %d x %d, population %d", E.root->k, 1 << E.root->k, 1 << E.root->k, E.root->n); 
-	E.root = advance(E.root, 1);
+	int step = pow(2, E.basestep);
+	E.root = advance(E.root, step);
 	if (last_k != E.root->k)
 		log_warn("Expanding universe (%dx%d). Depth:%d", 1 << E.root->k, 1 << E.root->k, E.root->k);
 	gridRender();
@@ -213,6 +216,17 @@ void gridRender(){
 	gridErase();
 	E.ox = E.screencols/2 - ( 1 << (E.root->k - 1) ); E.oy = E.screenrows/2 - ( 1 << (E.root->k - 1) );
 	expand(E.root, E.ox + E.offx, E.oy + E.offy);
+}
+
+
+void changeBasestep(int order){
+	// Can't decrease anymore
+	if (E.basestep == 0 && order != 1)
+		return;
+	// 1 to incerase
+	// else decrease speed
+	E.basestep = order == 1 ? E.basestep + 1 : E.basestep - 1;
+	log_info("%s base step to: 2^%d", order == 1 ? "Increased" : "Decreased", E.basestep);
 }
 
 /*** input ***/
@@ -264,13 +278,11 @@ void editorMoveCursor(int key){
 			else E.cy+=10;
 			break;
 	}
-
 	gridRender();
 }
 
 void editorProcessKeypress(){
 	int c = editorReadKey();
-
 	switch(c){
 		case QUIT:
 		case CTRL_KEY('q'):
@@ -291,9 +303,18 @@ void editorProcessKeypress(){
 			editorMoveCursor(c);
 			break;
 
+		case INC_BASE:
+			changeBasestep(1);
+			break;
+
+		case DEC_BASE:
+			changeBasestep(0);
+			break;
+
 		case MARK:
 			gridMark();
 			break;
+
 		case STEP:
 			gridUpdate();
 			break;
@@ -301,9 +322,108 @@ void editorProcessKeypress(){
 		case PLAY:
 			gridPlay();
 			break;
+	}
+}
+
+Node *readPattern(char* filename){
+	FILE *fp;
+	char line[10000];
+	fp = fopen(filename, "r");
+	Node *root;
+	int indlen = 10;
+	int inode = 1;
+	Node **ind = (Node **)calloc(indlen, sizeof(Node *)); 
+	ind[0] = get_zero(2) ; /* allow zeros to work right */
+	while (fgets(line, 10000, fp) != NULL){
+		if(line[0] == '#' | line[0] == '[' | strlen(line) <=1) // Skip the Header and rule line
+			continue;
+
+		if (inode > indlen - 1) {
+			indlen += 10;
+			ind = (Node **)realloc(ind, sizeof(Node*) * indlen) ;
+		}
+
+		log_info("Proecss line:%s", line);
+		if (line[0] == '.' || line[0] == '*' || line[0] == '$') {
+			// Each line represent an 8x8 node
+			// "." representing an empty cell
+			// "*" representing a live cell
+			// "$" representing the end of line
+			int cellnums = 0, x = 0, y = 0;
+			int points[64][2];
+			char *c = 0;
+			int ipos = 0;
+			for (c=line; *c > ' '; c++) {
+				switch (*c){
+					case '*':
+						if (x > 7 || y < 0) {
+							fprintf(stderr, "Illegal coordinates (%d,%d)\n", x, y) ;
+							exit(10) ;
+						}
+						// in case the constructs output a 4x4 node, we need to know which position of this 4x4 is in 8x8
+						// ipos keep track of it
+						if (x < 4){
+							if (y< 4)
+								ipos = 1; // a
+							else
+								ipos = 3; // c
+						}else{
+							if (y< 4)
+								ipos = 2; // b
+							else
+								ipos = 4; // d
+						}
+						points[cellnums][0] = x;
+						points[cellnums][1] = y;
+						log_info("Get new cell x:%d, y:%d", x, y);
+						x++;
+						cellnums++;
+						break;
+					case '.':
+						x++;
+						break;
+					case '$':
+						y++;
+						x=0;
+						break;
+					default:       
+						fprintf(stderr, "Illegal char %c\n", *c) ;
+						exit(10) ;
+				}
+			}
+			root = construct(points, cellnums);
+			while(root->k < 3){
+				root = join(
+						ipos == 1 ? root : get_zero(root->k),
+						ipos == 2 ? root : get_zero(root->k),
+						ipos == 3 ? root : get_zero(root->k),
+						ipos == 4 ? root : get_zero(root->k)
+						);
+				log_info("Expanding constructed to depth :%d ipos:%d", root->k, ipos);
+			}
+			ind[inode++] = root;
+			//return root;
+		}else{
+			//Level 4 and above nodes are represented by five numbers: lev a b c d
+			//where lev is the level and a, b, c d are for index quaters of the node 
+			int n, ia, ib, ic, id, depth;
+			n = sscanf(line, "%d %d %d %d %d", &depth, &ia, &ib, &ic, &id);
+			if (n < 4) {
+				fprintf(stderr, "Parse error; line is \"%s\"\n", line) ;
+				exit(10) ;
+			}
+			ind[0] = get_zero(depth-1) ; /* allow zeros to work right */
+			Node *p = find_node(ind[ia], ind[ib], ind[ic], ind[id]) ;
+			if (p==NULL)
+				p = join(ind[ia], ind[ib], ind[ic], ind[id]);
+			root = ind[inode++] = p;
+		}
 
 	}
-
+	fclose(fp);
+	if (ind)
+		free(ind);
+	return root;
 }
 
 /*** output ***/
@@ -326,7 +446,7 @@ void editorDrawStatusBar(struct abuf *ab) {
 	char status[120], rstatus[120];
 
 	int len = snprintf(status, sizeof(status), "press q to quit --- wasd|hjkl|ARROWS to navigate (upper case to move faster) --- x|space to mark --- u|n to update");
-	int rlen = snprintf(rstatus, sizeof(rstatus), "%d-%d",E.cx,  E.cy);
+	int rlen = snprintf(rstatus, sizeof(rstatus), "Step: 2^%d | %d-%d",E.basestep, E.cx,  E.cy);
 	if (len > E.screencols) len = E.screencols;
 	abAppend(ab, status, len);
 	while (len < E.screencols) {
@@ -379,32 +499,32 @@ void editorRefreshScreen() {
 
 
 /*** init ***/
-void initEditor(){
+void initEditor(int argc, char *argv[]){
 	if (getWindowSize(&E.screenrows, &E.screencols) == -1 ) die("WindowSize");
 	E.cx = 0; E.cy = 0;
-	E.offx = 0; E.offy = 10;
+	E.offx = 0; E.offy = 0;
 	E.gridrows = E.screenrows - 1; // status bar
 	E.gridcols = E.screencols;
+	E.basestep= 0;
 	
 	E.grid = calloc( E.gridrows, sizeof(int *) );
 	for ( int i = 0; i < E.gridrows; i++ )
 		E.grid[i] = calloc( E.gridcols, sizeof(int) );
 
-	gridErase();
-
-	init();
-	int n = 5;
-	int points[5][2] = {{0, 0}, {0, 1}, {0, 2}, {1, 0}, {2, 1}};
-
-	Node *root = construct(points, n);
-	//E.root = get_zero(1);
-	E.root = root;
+	init_hashtab();
+	int n = 4;
+	int points[4][2] = {{0, 0}, {0, 7}, {1, 7}, {2, 7}};
+	//Node *root = construct(points, n);
+	if (argc == 2)
+		E.root = readPattern(argv[1]);
+	else
+		E.root = get_zero(1);
 	gridRender();
 
-	log_warn("Universe Created: (%d x %d). Depth: %d", 1 << E.root->k, 1 << E.root->k, E.root->k);
+	log_warn("Universe Created: (%d x %d), Depth: %d, Population: %d", 1 << E.root->k, 1 << E.root->k, E.root->k, E.root->n);
 }
 
-int main(){
+int main(int argc, char *argv[] ){
 	
 	log_set_quiet(true);
 	FILE *fp = fopen("lifeterm.log", "a+");
@@ -412,12 +532,12 @@ int main(){
 		printf("unable to open file to write log");
 		return 0;
 	}
-	log_add_fp(fp, 3);
+	log_add_fp(fp, 3); // 3 is error, 0 is info
 	log_info("Start");
 	log_info("-------------------------------------------------------");
 
 	enableRawMode();
-	initEditor();
+	initEditor(argc, argv);
 
 	while(1){
 		editorRefreshScreen();

@@ -15,7 +15,7 @@ Node *join(const Node *a, const Node *b, const Node *c, const Node *d){
 }
 
 
-void init(){ 
+void init_hashtab(){ 
 	hashtab = (Node **)calloc(MAX_NODES, sizeof(Node *)); 
 }
 
@@ -48,7 +48,7 @@ Node *newnode(Node *a, Node *b, Node *c, Node *d){
 	}
 
 	hashtab[h] = node; // push in to hashtable
-	log_info("Create new node: Node k=%d, %d x %d, population %d at hash:%d", node->k, 1 << node->k, 1 << node->k, node->n, h); 
+	//log_info("Create new node: Node k=%d, %d x %d, population %d at hash:%d", node->k, 1 << node->k, 1 << node->k, node->n, h); 
 	return node;
 }
 
@@ -76,46 +76,35 @@ Node *get_zero(int k){
 }
 
 Node *construct(int points[][2], int n){
-
-	// Translate points to origin
-	int min_x = INT_MAX;
-	int min_y = INT_MAX;
-	for(int i=0; i < n; i++){
-		if (points[i][0] < min_x)
-			min_x = points[i][0];
-		if (points[i][1] < min_y)
-			min_y = points[i][1];
-	}
-
-	// Init a mapping of node with ON (level=0)
-	MapNode *pattern = malloc(n*sizeof (MapNode)); 
-	for (int i=0; i < n; i++){
-		int x = points[i][0] - min_x;
-		int y = points[i][1] - min_y;
+	 // Init a mapping of node with ON (level=0)
+	 MapNode *pattern = malloc(n*sizeof (MapNode)); 
+	 for (int i=0; i < n; i++){
+		int x = points[i][0];
+		int y = points[i][1];
 		log_info("construct x:%d, y:%d", x, y);
 		pattern[i] = (MapNode){.p = ON, .x = x, .y = y}; 
 	}
 
 	int k = 0;
-	while (n > 1){ // until there are only node node left
+	while (n > 1){ // until there are only one node left
 		Node *z = get_zero(k);
 		MapNode *next_level = malloc(n * sizeof(MapNode));
 		int m = 0; // store number of node in this level
-		for (int i = 0; i < n; i++){ // Each loop is to construct one level
+		for (int i = 0; i < n; i++){ // Group all childs node in current depth to from parents nodes
 			MapNode p = pattern[i];
 			if (p.p == NULL)
 				continue;
 
-			Node *a = z, *b = z, *c = z, *d = z ;
+			Node *a = z, *b = z, *c = z, *d = z;
 			int x = p.x - (int)(p.x & 1); int y = p.y - (int)(p.y & 1); // Move index to the start of its block
-			for (int j = i; j < n; j++){ // Find all points that inside this 2x2 block
+			for (int j = i; j < n; j++){ // find neighbours of current node
 				MapNode *pp = &pattern[j];
 				if (pp->p == NULL)
 					continue;
 
 				if (pp->x == x && pp->y == y){
 					a = pp->p;
-					pp->p = NULL;
+					pp->p = NULL; // set to None so this node will be excluded in the next loop
 				} else if (pp->x == x + 1 && pp->y == y){
 					b = pp->p;
 					pp->p = NULL;
@@ -128,9 +117,7 @@ Node *construct(int points[][2], int n){
 				}
 			}
 
-			Node *nodek = find_node(a, b, c, d);
-			if (nodek == NULL) // create new if does not exist
-				nodek = newnode(a, b, c, d);
+			Node *nodek = newnode(a, b, c, d);
 			next_level[m] = (MapNode){.x = x >> 1, .y = y >> 1, .p = nodek}; // store a list of all pattern in this level
 			m++;
 		}
@@ -141,13 +128,13 @@ Node *construct(int points[][2], int n){
 
 	Node *result = pattern->p;
 	free(pattern); // Can't let the garbage floatting around
-	result = pad(result);
 	log_info("Constructed node: Node k=%d, %d x %d, population %d", result->k, 1 << result->k, 1 << result->k, result->n); 
-	return pad(result);
+	return result;
 }
 
 
 void expand(Node *node, int x, int y){
+	int offset = 1 << (node->k - 1);
 	if (node->n == 0)
 		return;
 
@@ -163,7 +150,6 @@ void expand(Node *node, int x, int y){
 		return;
 	}
 
-	int offset = 1 << (node->k - 1);
 	expand(node->a, x, y);
 	expand(node->b, x + offset, y);
 	expand(node->c, x, y + offset);

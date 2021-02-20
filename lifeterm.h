@@ -2,12 +2,14 @@
 #define LIFETERM
 #include <stdlib.h>
 #include <termios.h>
+#include <assert.h>
 #include <errno.h>
 #include <unistd.h>
 #include <stdio.h>
 #include <ctype.h>
 #include <sys/ioctl.h>
 #include <string.h>
+#include <math.h>
 #include "hashlife.h"
 #include "log.h"
 
@@ -20,8 +22,6 @@
 
 /*** structs ***/
 
-void editorRefreshScreen();
-
 enum editorKey {
 	ARROW_LEFT = 1000,
 	ARROW_RIGHT, // = 1001 by convention
@@ -31,6 +31,8 @@ enum editorKey {
 	D_UPPER,
 	W_UPPER,
 	S_UPPER,
+	INC_BASE,
+	DEC_BASE,
 	STEP,
 	PLAY,
 	MARK,
@@ -48,6 +50,7 @@ struct editorConfig {
 	int cx, cy; // Position of Cursor
 	int ox, oy; // Origin of the root node
 	int offx, offy; // Offset of the universe when move to the edges
+	int basestep; // one update will be 2^basestep generation
 	int screenrows;
 	int screencols;
 	int gridrows;
@@ -63,7 +66,6 @@ void clearScreen();
 void die(const char *s);
 void disableRawMode();
 void disableRawMode();
-int editorReadKey();
 int getCursorPosition(int *rows, int*cols);
 int getWindowSize(int *rows, int *cols);
 
@@ -74,16 +76,20 @@ void abFree(struct abuf *ab);
 
 
 /*** grid operations ***/
+void pushroot();
 void gridMark();
 void gridErase();
 void gridUpdate();
 void gridRender();
 void gridPlay();
+void changeBasestep(int order);
 
 
 /*** input ***/
+int editorReadKey();
 void editorMoveCursor(int key);
 void editorProcessKeypress();
+struct Node *readPattern(char *filename);
 
 
 /*** output ***/
@@ -94,7 +100,7 @@ void editorRefreshScreen();
 
 
 /*** init ***/
-void initEditor();
+void initEditor(int argc, char *argv[]);
 
 
 /*** Global ***/
