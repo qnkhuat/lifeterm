@@ -2,6 +2,7 @@
 #define LIFETERM
 #include <stdlib.h>
 #include <termios.h>
+#include <assert.h>
 #include <errno.h>
 #include <unistd.h>
 #include <stdio.h>
@@ -20,8 +21,6 @@
 
 
 /*** structs ***/
-
-void editorRefreshScreen();
 
 enum editorKey {
 	ARROW_LEFT = 1000,
@@ -67,7 +66,6 @@ void clearScreen();
 void die(const char *s);
 void disableRawMode();
 void disableRawMode();
-int editorReadKey();
 int getCursorPosition(int *rows, int*cols);
 int getWindowSize(int *rows, int *cols);
 
@@ -88,8 +86,10 @@ void changeBasestep(int order);
 
 
 /*** input ***/
+int editorReadKey();
 void editorMoveCursor(int key);
 void editorProcessKeypress();
+struct Node *readPattern(char *filename);
 
 
 /*** output ***/
@@ -100,7 +100,7 @@ void editorRefreshScreen();
 
 
 /*** init ***/
-void initEditor();
+void initEditor(int argc, char *argv[]);
 
 
 /*** Global ***/

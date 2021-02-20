@@ -10,7 +10,18 @@ I use the [hashlife](https://en.wikipedia.org/wiki/Hashlife) algorithm to repres
 ### RUN
 > The grid is based on the screen size of your terminal, so make sure you larger your screen before run
 
-`chmod +x run.sh && ./run.sh`
+### Build
+`make lifeterm`
+### Run
+Init an empty world
+
+`./lifeterm.o`
+
+Lifeterm is currently support to load pattern in Macrocell(.mc) format. Just type:
+
+`./lifeterm.o {path}`
+
+
 
 ### Keymap
 | Key      | Description               |

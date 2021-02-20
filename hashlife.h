@@ -46,7 +46,7 @@ Node *life(Node *n1, Node *n2, Node *n3, Node *n4, Node *c, Node *n6, Node *n7, 
 Node *life4x4(Node *p);
 
 /*** View helpers ***/
-void init();
+void init_hashtab();
 void resize();
 
 /*** Utilities ***/
@@ -65,7 +65,7 @@ void test_new_collided();
 /*** Defines ***/
 #define MAX_DEPTH SHORT_MAX
 //#define MAX_NODES INT_MAX
-#define MAX_NODES 7919 
+#define MAX_NODES 12387837
 #define ON  &on
 #define OFF &off
 #define min(a, b) (((a) < (b)) ? (a) : (b))
