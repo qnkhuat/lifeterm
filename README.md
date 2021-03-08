@@ -1,7 +1,6 @@
 # LifeTerm
 Game of life editor right on your terminal because why not? 🤷
 
-This is a work in progress, there are tons of thing to improve.
 ![](./assets/demo.png)
 
 I use the [hashlife](https://en.wikipedia.org/wiki/Hashlife) algorithm to represent the universe and update cells.
