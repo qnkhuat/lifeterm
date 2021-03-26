@@ -163,7 +163,7 @@ void abFree(struct abuf *ab){
 }
 
 /*** grid operations ***/
-void pushroot(){
+void pushRoot(){
 	E.root = centre(E.root);
 	E.ox = E.screencols/2 - ( 1 << (E.root->k - 1) ); E.oy = E.screenrows/2 - ( 1 << (E.root->k - 1) );
 	log_warn("Expanding universe (%d x %d). Depth: %d", 1 << E.root->k, 1 << E.root->k, E.root->k);
@@ -172,12 +172,15 @@ void pushroot(){
 void gridMark(){
 	while(E.cx - E.ox < 0 || E.cy - E.oy < 0 ||
 		E.cx - E.ox > 1 << E.root->k || E.cy - E.oy > 1 << E.root->k)
-		pushroot();
+		pushRoot();
 
 	mark(E.root, E.cx - E.ox - E.offx, E.cy - E.oy - E.offy);
 	gridRender();
 }
 
+void resetRoot(){
+  E.root = get_zero(1);
+}
 void gridErase(){
 	// TODO : use memset to set values not for loop
 	for (int col = 0; col < E.gridcols; col++){
@@ -290,7 +293,7 @@ void editorProcessKeypress(){
 			exit(0);
 			break;
 		case ERASE:
-			gridErase();
+      resetRoot();
 			break;
 		case ARROW_LEFT:
 		case ARROW_RIGHT:

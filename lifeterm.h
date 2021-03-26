@@ -76,7 +76,8 @@ void abFree(struct abuf *ab);
 
 
 /*** grid operations ***/
-void pushroot();
+void pushRoot();
+void resetRoot();
 void gridMark();
 void gridErase();
 void gridUpdate();
