@@ -176,11 +176,11 @@ void pushRoot(){
 }
 
 void gridMark(){
-	while(E.cx - E.ox - E.offx < 0 || E.cy - E.oy - E.offy < 0 ||
-		E.cx - E.ox - E.offx > (1 << E.root->k) || E.cy - E.oy - E.offy > (1 << E.root->k))
+	while(E.cx/2 - E.ox - E.offx < 0 || E.cy - E.oy - E.offy < 0 ||
+		E.cx/2 - E.ox - E.offx > (1 << E.root->k) || E.cy - E.oy - E.offy > (1 << E.root->k))
 		pushRoot();
 
-  int x = E.cx - E.ox - E.offx;
+  int x = E.cx/2 - E.ox - E.offx;
   int y = E.cy - E.oy - E.offy;
 	mark(E.root, x, y);
   log_warn("Mark: Node k=%d, x=%d, y=%d, population=%d, E.ox=%d, E.oy=%d, E.offx=%d, E.offy=%d", E.root->k, x, y, E.root->n, E.ox, E.oy, E.offx, E.offy);
@@ -247,12 +247,12 @@ void changeBasestep(int order){
 void editorMoveCursor(int key){
 	switch(key){
 		case ARROW_LEFT:
-			if (E.cx!=0) E.cx-=1;
-			else E.offx+=1;
+			if (E.cx!=0) E.cx-=2;
+			else E.offx+=2;
 			break;
 		case ARROW_RIGHT:
-			if (E.cx!= E.gridcols-1) E.cx+=1;
-			else E.offx-=1;
+			if (E.cx!= E.gridcols-2) E.cx+=2;
+			else E.offx-=2;
 			break;
 		case ARROW_UP:
 			if(E.cy!=0)	E.cy--;
@@ -480,11 +480,11 @@ void editorDrawGrid(struct abuf *ab) {
 		for (int col = 0; col < E.gridcols; col++){
 			if (E.grid[row][col] == 1){
 				abAppend(ab, "\x1b[7m", 4);// switch to inverted color
-				abAppend(ab, " ", 1);
+				abAppend(ab, "  ", 2);
 				abAppend(ab, "\x1b[m", 3);// switch back to normal color
 			}
 			else
-				abAppend(ab, " ", 1);
+				abAppend(ab, "  ", 2);
 		}
 		abAppend(ab, "\r\n", 2);
 	}
@@ -517,7 +517,7 @@ void initEditor(int argc, char *argv[]){
 	E.cx = 0; E.cy = 0;
 	E.offx = 0; E.offy = 0;
 	E.gridrows = E.screenrows - 1; // status bar
-	E.gridcols = E.screencols;
+	E.gridcols = E.screencols / 2;
 	E.basestep= 0;
 	
   // Init the grid to display
