@@ -191,8 +191,8 @@ void mark(Node *p, int x, int y){
 			x_1 = x;
 			y_1 = y;
 		}
-
 	}
+
 	n = nodetab[1].p;
 	size = 1 << (n->k - 1);
 	Node *node2x2 = join(
@@ -253,14 +253,12 @@ Node *successor(Node *p, int j){
 		Node *c8 = successor(join(p->c->b, p->d->a, p->c->d, p->d->c), j);
 		Node *c9 = successor(join(p->d->a, p->d->b, p->d->c, p->d->d), j);
 		if (j < p->k - 2){
-			//log_info("IN: j:%d, p->k:%d");
 			result = join(
 					join(c1->d, c2->c, c4->b, c5->a),
 					join(c2->d, c3->c, c5->b, c6->a),
 					join(c4->d, c5->c, c7->b, c8->a),
 					join(c5->d, c6->c, c8->b, c9->a));
 		} else {
-			//log_info("Out: j:%d, p->k:%d");
 			result = join(
 					successor(join(c1, c2, c4, c5), j),
 					successor(join(c2, c3, c5, c6), j),
@@ -414,24 +412,6 @@ void test_construct(){
 	print_node(p);
 }
 
-
-//void test_expand(){
-//	int n = 3; // number of points
-//	int points[3][2] = {{0, 1}, {2, 2}, {2,6}};
-//
-//	Node *p = construct(points, n);
-//	print_node(p);
-//	mark(p, 0, 0, 3, 3);
-//	render(p);
-//	for (int x = 0; x < E.gridcols; x++){
-//		for (int y = 0; y < E.gridrows ; y++){
-//			if (E.grid[x][y] == 1){
-//				log_info("grid x:%d, y:%d", x, y);
-//			}
-//		}
-//	}
-//}
-//
 
 void test_life(){
 	/*

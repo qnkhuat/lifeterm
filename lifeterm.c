@@ -171,18 +171,18 @@ void pushRoot(){
 
 void gridMark(){
 	while(E.cx - E.ox < 0 || E.cy - E.oy < 0 ||
-		E.cx - E.ox > 1 << E.root->k || E.cy - E.oy > 1 << E.root->k)
+		E.cx - E.ox > (1 << E.root->k) || E.cy - E.oy > (1 << E.root->k))
 		pushRoot();
 
   int x = (E.cx+1)/2 - E.ox - E.offx;
   int y = E.cy - E.oy - E.offy;
 	mark(E.root, x, y);
-  log_warn("Mark: Node k=%d, x=%d, y=%d", E.root->k, x, y);
+  log_warn("Mark: Node k=%d, x=%d, y=%d, population=%d", E.root->k, x, y, E.root->n);
 	gridRender();
 }
 
 void resetRoot(){
-  E.root = get_zero(1);
+  E.root = get_zero(E.root->k);
 }
 void gridErase(){
 	// TODO : use memset to set values not for loop
@@ -209,7 +209,6 @@ void gridPlay(){
 		if (c == PLAY){
 			gridUpdate();
 			editorRefreshScreen();
-			//sleep(0.1);
 			break;
 		}
 	}
@@ -218,9 +217,10 @@ void gridPlay(){
 
 void gridRender(){
 	// By default the the upper left of the node will be (0, 0). 
-	// In order to redner consistently we push the orgin to the upper left as the level of Root increase.
+	// In order to render consistently we push the orgin to the upper left as the level of Root increase.
 	gridErase();
 	E.ox = E.screencols/2 - ( 1 << (E.root->k - 1) ); E.oy = E.screenrows/2 - ( 1 << (E.root->k - 1) );
+  log_warn("Render with: E.ox=%d, E.oy=%d, and x=%d, y=%d", E.ox, E.oy, E.ox + E.offx, E.oy + E.offy);
 	expand(E.root, E.ox + E.offx, E.oy + E.offy);
 }
 
@@ -514,13 +514,14 @@ void initEditor(int argc, char *argv[]){
 	E.gridcols = E.screencols / 2;
 	E.basestep= 0;
 	
+  // Init the grid to display
 	E.grid = calloc( E.gridrows, sizeof(int *) );
 	for ( int i = 0; i < E.gridrows; i++ )
 		E.grid[i] = calloc( E.gridcols, sizeof(int) );
 
 	init_hashtab();
-	int n = 4;
-	int points[4][2] = {{0, 0}, {0, 7}, {1, 7}, {2, 7}};
+	//int n = 4;
+	//int points[4][2] = {{0, 0}, {0, 7}, {1, 7}, {2, 7}};
 	//Node *root = construct(points, n);
 	if (argc == 2)
 		E.root = readPattern(argv[1]);
