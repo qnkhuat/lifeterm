@@ -36,12 +36,9 @@ Lifeterm is currently support to load pattern in Macrocell(.mc) format. Just typ
 | q        | Quit                      |
 | i/I      | Increase/Decrease Step size by factor of 2|
 
-### Font
-For the best experience, Use the font [square](/assets/square.ttf) on your terminal, It has square cells. 
-
 # Todo
 - [x] Infinite grid / Dynamic size grid
-- [ ] Square grid cell without font
-- [ ] Add load/save game
+- [x] Load patter
+- [ ] Save pattern
 
 
