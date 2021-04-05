@@ -3,5 +3,5 @@ clear
 F=lifeterm
 make $F
 #if [ $? -eq 0 ]; then ./$F.o repos/golly-4.0-src/Patterns/HashLife/broken-lines.mc; fi
-if [ $? -eq 0 ]; then ./$F.o patterns/glider.mc; fi
+if [ $? -eq 0 ]; then ./$F.o patterns/hashlife-oddity2.mc; fi
 #if [ $? -eq 0 ]; then ./$F.o; fi

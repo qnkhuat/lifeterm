@@ -166,7 +166,8 @@ void abFree(struct abuf *ab){
 void gridUpdateOrigin(){
   // Maintain the universe to be rendered at the center of screen
   // As the universe grow bigger, the origin willl be push to the upper left
-	E.ox = E.screencols/2 - (1 << (E.root->k - 1)); E.oy = E.screenrows/2 - ( 1 << (E.root->k - 1) );
+	E.ox = E.screencols/2/2 - (1 << (E.root->k - 1)); 
+  E.oy = E.screenrows/2 - ( 1 << (E.root->k - 1) );
 }
 
 void pushRoot(){
@@ -183,7 +184,6 @@ void gridMark(){
   int x = E.cx/2 - E.ox - E.offx;
   int y = E.cy - E.oy - E.offy;
 	mark(E.root, x, y);
-  log_warn("Mark: Node k=%d, x=%d, y=%d, population=%d, E.ox=%d, E.oy=%d, E.offx=%d, E.offy=%d", E.root->k, x, y, E.root->n, E.ox, E.oy, E.offx, E.offy);
 
 	gridRender();
 }
@@ -203,7 +203,6 @@ void gridErase(){
 
 void gridUpdate(){
 	int last_k = E.root->k;
-	log_info("Root: Node k=%d, %d x %d, population %d", E.root->k, 1 << E.root->k, 1 << E.root->k, E.root->n); 
 	int step = pow(2, E.basestep);
 	E.root = advance(E.root, step);
 	if (last_k != E.root->k)
@@ -227,7 +226,6 @@ void gridRender(){
 	// In order to render consistently we push the orgin to the upper left as the level of Root increase.
 	gridErase();
   gridUpdateOrigin();
-  log_warn("Render with: E.ox=%d, E.oy=%d, E.offx=%d, E.offy=%d, and x=%d, y=%d", E.ox, E.oy, E.offx, E.offy, E.ox + E.offx, E.oy + E.offy);
 	expand(E.root, E.ox + E.offx, E.oy + E.offy);
 }
 
@@ -251,7 +249,7 @@ void editorMoveCursor(int key){
 			else E.offx+=2;
 			break;
 		case ARROW_RIGHT:
-			if (E.cx!= E.gridcols-2) E.cx+=2;
+			if (E.cx <= E.gridcols-2) E.cx+=2;
 			else E.offx-=2;
 			break;
 		case ARROW_UP:
@@ -526,8 +524,8 @@ void initEditor(int argc, char *argv[]){
 		E.grid[i] = calloc( E.gridcols, sizeof(int) );
 
 	init_hashtab();
-	//int n = 4;
-	//int points[4][2] = {{0, 0}, {0, 7}, {1, 7}, {2, 7}};
+	int n = 4;
+	int points[4][2] = {{0, 0}, {0, 7}, {1, 7}, {2, 7}};
 	//Node *root = construct(points, n);
   //E.root = root;
   if (argc == 2){

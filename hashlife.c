@@ -1,4 +1,6 @@
 #include "hashlife.h"
+#include <time.h>
+
 Node on  = {1, 0, NULL, NULL, NULL, NULL};
 Node off = {0, 0, NULL, NULL, NULL, NULL};
 Node **hashtab;
@@ -19,9 +21,9 @@ void init_hashtab(){
 	hashtab = (Node **)calloc(MAX_NODES, sizeof(Node *)); 
 }
 
-unsigned int node_hash(Node *a, Node *b, Node *c, Node *d) {
+uintptr_t node_hash(Node *a, Node *b, Node *c, Node *d) {
 	// Refer to test_hash.c for different hash methods
-	unsigned int h = 65537*(unsigned int)(d)+257*(unsigned int)(c)+17*(unsigned int)(b)+5*(unsigned int)(a);
+	uintptr_t h = 65537*(uintptr_t)(d)+257*(uintptr_t)(c)+17*(uintptr_t)(b)+5*(uintptr_t)(a);
 	return h % MAX_NODES;
 }
 
@@ -41,37 +43,37 @@ Node *newnode(Node *a, Node *b, Node *c, Node *d){
 	node->d = d;
 	node->next = NULL;
 
-	int h = node_hash(a, b, c, d);
-	if (hashtab[h] != NULL){
-		log_info("Create: Hash collided");
+	uintptr_t h = node_hash(a, b, c, d);
+	if (hashtab[h] != NULL){ // hash collided
 		node->next = hashtab[h];
 	}
 
-	hashtab[h] = node; // push in to hashtable
-	//log_info("Create new node: Node k=%d, %d x %d, population %d at hash:%d", node->k, 1 << node->k, 1 << node->k, node->n, h); 
-	return node;
+  hashtab[h] = node; // push in to hashtable
+  //log_info("Create new node: Node k=%d, %d x %d, population %d at hash:%d", node->k, 1 << node->k, 1 << node->k, node->n, h); 
+  return node;
 }
 
 Node *find_node(Node *a, Node *b, Node *c, Node *d){
-	int h = node_hash(a, b, c, d);
-	Node *p;
-	for (p=hashtab[h]; p; p = p->next)  /* make sure to compare a first */
-		if (p->a == a && p->b == b && p->c == c && p->d == d) // In case hash collision compare its value
-			return p;
-	return p; // NULL
+  uintptr_t h = node_hash(a, b, c, d);
+  Node *p;
+  for (p=hashtab[h]; p; p = p->next)  /* make sure to compare a first */
+    if (p->a == a && p->b == b && p->c == c && p->d == d) {// In case hash collision compare its value
+      return p;
+    }
+  return p; // NULL
 }
 
 Node *get_zero(int k){
-	int c = 0;
-	Node *p = OFF;
-	while (c!=k){
-		Node *np = find_node(p, p, p, p);
-		if(np==NULL)
-			p = newnode(p, p, p, p);
-		else
-			p = np;
-		c++;
-	}
+  int c = 0;
+  Node *p = OFF;
+  while (c!=k){
+    Node *np = find_node(p, p, p, p);
+    if(np==NULL)
+      p = newnode(p, p, p, p);
+    else
+      p = np;
+    c++;
+  }
 	return p;
 }
 
@@ -148,7 +150,6 @@ void expand(Node *node, int x, int y){
 	// base case
 	if (node->k == 0){
 		E.grid[y][x] = 1;
-		log_info("expand x:%d, y:%d, Ox:%d, Oy:%d", x, y, E.ox, E.oy);
 		return;
 	}
 

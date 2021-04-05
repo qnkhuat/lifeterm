@@ -32,7 +32,7 @@ typedef struct{
 /*** Node operations ***/
 Node *get_zero(int k);
 Node *newnode(Node *a, Node *b, Node *c, Node *d);
-unsigned int node_hash(Node *a, Node *b, Node *c, Node *d);
+uintptr_t node_hash(Node *a, Node *b, Node *c, Node *d);
 Node *find_node(Node *a, Node *b, Node *c, Node *d);
 Node *join(const Node *a, const Node *b, const Node *c, const Node *d);
 Node *construct(int points[][2], int n);
@@ -65,7 +65,7 @@ void test_new_collided();
 /*** Defines ***/
 #define MAX_DEPTH SHORT_MAX
 //#define MAX_NODES INT_MAX
-#define MAX_NODES 12387837
+#define MAX_NODES INT_MAX
 #define ON  &on
 #define OFF &off
 #define min(a, b) (((a) < (b)) ? (a) : (b))
