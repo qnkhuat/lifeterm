@@ -270,9 +270,9 @@ void editorMoveCursor(int key){
 			else E.cx -= 10;
 			break;
 		case D_UPPER:
-			if (E.cx + 10 >= E.gridcols){
-				E.offx -= 10 - (E.gridcols-1 - E.cx);
-				E.cx = E.gridcols- 1;
+			if (E.cx + 10 >= E.screencols){
+				E.offx -= 10 - (E.screencols-1 - E.cx);
+				E.cx = E.screencols - 1;
 			}
 			else E.cx += 10;
 			break;
@@ -530,8 +530,14 @@ void initEditor(int argc, char *argv[]){
 	//int points[4][2] = {{0, 0}, {0, 7}, {1, 7}, {2, 7}};
 	//Node *root = construct(points, n);
   //E.root = root;
-	if (argc == 2)
+  if (argc == 2){
 		E.root = readPattern(argv[1]);
+    gridUpdateOrigin();
+    //E.offx = -E.ox;
+    //E.offy = -E.oy;
+    // TODO : auto reallocate the pattern to the center
+    
+  }
 	else
 		E.root = get_zero(1);
 	gridRender();
