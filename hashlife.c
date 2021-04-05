@@ -134,6 +134,8 @@ Node *construct(int points[][2], int n){
 
 
 void expand(Node *node, int x, int y){
+  // if node->k == 0 : (x, y) is the position on the grid
+  // else (x, y) is the position of the node's upper left tile
 	int offset = 1 << (node->k - 1);
 	if (node->n == 0)
 		return;
@@ -157,6 +159,7 @@ void expand(Node *node, int x, int y){
 }
 
 void mark(Node *p, int x, int y){
+  // x, y is the position in the universe with the universe's origin at upper left corner
 
 	Node *n = p;
 	MapNode *nodetab = (MapNode *)calloc((p->k+1), sizeof (MapNode)); 
@@ -216,7 +219,6 @@ void mark(Node *p, int x, int y){
 				);
 	}
 
-	n = nodetab[p->k].p;
 	E.root = nodetab[p->k].p;
 	free(nodetab);
 }

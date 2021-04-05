@@ -163,26 +163,34 @@ void abFree(struct abuf *ab){
 }
 
 /*** grid operations ***/
+void gridUpdateOrigin(){
+  // Maintain the universe to be rendered at the center of screen
+  // As the universe grow bigger, the origin willl be push to the upper left
+	E.ox = E.screencols/2 - (1 << (E.root->k - 1)); E.oy = E.screenrows/2 - ( 1 << (E.root->k - 1) );
+}
+
 void pushRoot(){
 	E.root = centre(E.root);
-	E.ox = E.screencols/2 - (1 << (E.root->k - 1)); E.oy = E.screenrows/2 - ( 1 << (E.root->k - 1) );
+  gridUpdateOrigin();
 	log_warn("Expanding universe (%d x %d). Depth: %d", 1 << E.root->k, 1 << E.root->k, E.root->k);
 }
 
 void gridMark(){
-	while(E.cx - E.ox < 0 || E.cy - E.oy < 0 ||
-		E.cx - E.ox > (1 << E.root->k) || E.cy - E.oy > (1 << E.root->k))
+	while(E.cx - E.ox - E.offx < 0 || E.cy - E.oy - E.offy < 0 ||
+		E.cx - E.ox - E.offx > (1 << E.root->k) || E.cy - E.oy - E.offy > (1 << E.root->k))
 		pushRoot();
 
-  int x = (E.cx+1)/2 - E.ox - E.offx;
+  int x = E.cx - E.ox - E.offx;
   int y = E.cy - E.oy - E.offy;
 	mark(E.root, x, y);
-  log_warn("Mark: Node k=%d, x=%d, y=%d, population=%d", E.root->k, x, y, E.root->n);
+  log_warn("Mark: Node k=%d, x=%d, y=%d, population=%d, E.ox=%d, E.oy=%d, E.offx=%d, E.offy=%d", E.root->k, x, y, E.root->n, E.ox, E.oy, E.offx, E.offy);
+
 	gridRender();
 }
 
-void resetRoot(){
+void emptyRoot(){
   E.root = get_zero(E.root->k);
+  gridRender();
 }
 void gridErase(){
 	// TODO : use memset to set values not for loop
@@ -208,7 +216,6 @@ void gridPlay(){
 		int c = editorReadKey();
 		if (c == PLAY){
 			gridUpdate();
-			editorRefreshScreen();
 			break;
 		}
 	}
@@ -219,8 +226,8 @@ void gridRender(){
 	// By default the the upper left of the node will be (0, 0). 
 	// In order to render consistently we push the orgin to the upper left as the level of Root increase.
 	gridErase();
-	E.ox = E.screencols/2 - ( 1 << (E.root->k - 1) ); E.oy = E.screenrows/2 - ( 1 << (E.root->k - 1) );
-  log_warn("Render with: E.ox=%d, E.oy=%d, and x=%d, y=%d", E.ox, E.oy, E.ox + E.offx, E.oy + E.offy);
+  gridUpdateOrigin();
+  log_warn("Render with: E.ox=%d, E.oy=%d, E.offx=%d, E.offy=%d, and x=%d, y=%d", E.ox, E.oy, E.offx, E.offy, E.ox + E.offx, E.oy + E.offy);
 	expand(E.root, E.ox + E.offx, E.oy + E.offy);
 }
 
@@ -296,7 +303,7 @@ void editorProcessKeypress(){
 			exit(0);
 			break;
 		case ERASE:
-      resetRoot();
+      emptyRoot();
 			break;
 		case ARROW_LEFT:
 		case ARROW_RIGHT:
@@ -319,7 +326,6 @@ void editorProcessKeypress(){
 
 		case MARK:
 			gridMark();
-			editorRefreshScreen();
 			break;
 
 		case STEP:
@@ -523,13 +529,15 @@ void initEditor(int argc, char *argv[]){
 	//int n = 4;
 	//int points[4][2] = {{0, 0}, {0, 7}, {1, 7}, {2, 7}};
 	//Node *root = construct(points, n);
+  //E.root = root;
 	if (argc == 2)
 		E.root = readPattern(argv[1]);
 	else
 		E.root = get_zero(1);
 	gridRender();
 
-	log_warn("Universe Created: (%d x %d), Depth: %d, Population: %d", 1 << E.root->k, 1 << E.root->k, E.root->k, E.root->n);
+	log_warn("Universe Created: (%d x %d), Depth: %d, Population: %d, E.ox:%d, E.oy:%d, E.offx:%d, E.offy:%d", 
+      1 << E.root->k, 1 << E.root->k, E.root->k, E.root->n, E.ox, E.oy, E.offx, E.offy);
 }
 
 int main(int argc, char *argv[] ){
