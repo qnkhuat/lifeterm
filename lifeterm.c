@@ -1,6 +1,6 @@
 #include "lifeterm.h"
-/*** terminal ***/
 
+/*** terminal ***/
 void clearScreen() {
 	write(STDOUT_FILENO, "\x1b[2J", 4); //4 means write 4 bytes out to terminal
 	// \x1b ~ 27 ~ esc
@@ -163,23 +163,34 @@ void abFree(struct abuf *ab){
 }
 
 /*** grid operations ***/
+void gridUpdateOrigin(){
+  // Maintain the universe to be rendered at the center of screen
+  // As the universe grow bigger, the origin willl be push to the upper left
+	E.ox = E.screencols/2 - (1 << (E.root->k - 1)); E.oy = E.screenrows/2 - ( 1 << (E.root->k - 1) );
+}
+
 void pushRoot(){
 	E.root = centre(E.root);
-	E.ox = E.screencols/2 - ( 1 << (E.root->k - 1) ); E.oy = E.screenrows/2 - ( 1 << (E.root->k - 1) );
+  gridUpdateOrigin();
 	log_warn("Expanding universe (%d x %d). Depth: %d", 1 << E.root->k, 1 << E.root->k, E.root->k);
 }
 
 void gridMark(){
-	while(E.cx - E.ox < 0 || E.cy - E.oy < 0 ||
-		E.cx - E.ox > 1 << E.root->k || E.cy - E.oy > 1 << E.root->k)
+	while(E.cx/2 - E.ox - E.offx < 0 || E.cy - E.oy - E.offy < 0 ||
+		E.cx/2 - E.ox - E.offx > (1 << E.root->k) || E.cy - E.oy - E.offy > (1 << E.root->k))
 		pushRoot();
 
-	mark(E.root, E.cx - E.ox - E.offx, E.cy - E.oy - E.offy);
+  int x = E.cx/2 - E.ox - E.offx;
+  int y = E.cy - E.oy - E.offy;
+	mark(E.root, x, y);
+  log_warn("Mark: Node k=%d, x=%d, y=%d, population=%d, E.ox=%d, E.oy=%d, E.offx=%d, E.offy=%d", E.root->k, x, y, E.root->n, E.ox, E.oy, E.offx, E.offy);
+
 	gridRender();
 }
 
-void resetRoot(){
-  E.root = get_zero(1);
+void emptyRoot(){
+  E.root = get_zero(E.root->k);
+  gridRender();
 }
 void gridErase(){
 	// TODO : use memset to set values not for loop
@@ -205,8 +216,6 @@ void gridPlay(){
 		int c = editorReadKey();
 		if (c == PLAY){
 			gridUpdate();
-			editorRefreshScreen();
-			//sleep(0.1);
 			break;
 		}
 	}
@@ -215,9 +224,10 @@ void gridPlay(){
 
 void gridRender(){
 	// By default the the upper left of the node will be (0, 0). 
-	// In order to redner consistently we push the orgin to the upper left as the level of Root increase.
+	// In order to render consistently we push the orgin to the upper left as the level of Root increase.
 	gridErase();
-	E.ox = E.screencols/2 - ( 1 << (E.root->k - 1) ); E.oy = E.screenrows/2 - ( 1 << (E.root->k - 1) );
+  gridUpdateOrigin();
+  log_warn("Render with: E.ox=%d, E.oy=%d, E.offx=%d, E.offy=%d, and x=%d, y=%d", E.ox, E.oy, E.offx, E.offy, E.ox + E.offx, E.oy + E.offy);
 	expand(E.root, E.ox + E.offx, E.oy + E.offy);
 }
 
@@ -237,12 +247,12 @@ void changeBasestep(int order){
 void editorMoveCursor(int key){
 	switch(key){
 		case ARROW_LEFT:
-			if (E.cx!=0) E.cx--;
-			else E.offx++;
+			if (E.cx!=0) E.cx-=2;
+			else E.offx+=2;
 			break;
 		case ARROW_RIGHT:
-			if (E.cx!= E.gridcols-1) E.cx++;
-			else E.offx--;
+			if (E.cx!= E.gridcols-2) E.cx+=2;
+			else E.offx-=2;
 			break;
 		case ARROW_UP:
 			if(E.cy!=0)	E.cy--;
@@ -293,7 +303,7 @@ void editorProcessKeypress(){
 			exit(0);
 			break;
 		case ERASE:
-      resetRoot();
+      emptyRoot();
 			break;
 		case ARROW_LEFT:
 		case ARROW_RIGHT:
@@ -406,7 +416,7 @@ Node *readPattern(char* filename){
 			}
 			ind[inode++] = root;
 			//return root;
-		}else{
+		} else {
 			//Level 4 and above nodes are represented by five numbers: lev a b c d
 			//where lev is the level and a, b, c d are for index quaters of the node 
 			int n, ia, ib, ic, id, depth;
@@ -470,11 +480,11 @@ void editorDrawGrid(struct abuf *ab) {
 		for (int col = 0; col < E.gridcols; col++){
 			if (E.grid[row][col] == 1){
 				abAppend(ab, "\x1b[7m", 4);// switch to inverted color
-				abAppend(ab, " ", 1);
+				abAppend(ab, "  ", 2);
 				abAppend(ab, "\x1b[m", 3);// switch back to normal color
 			}
 			else
-				abAppend(ab, " ", 1);
+				abAppend(ab, "  ", 2);
 		}
 		abAppend(ab, "\r\n", 2);
 	}
@@ -507,38 +517,41 @@ void initEditor(int argc, char *argv[]){
 	E.cx = 0; E.cy = 0;
 	E.offx = 0; E.offy = 0;
 	E.gridrows = E.screenrows - 1; // status bar
-	E.gridcols = E.screencols;
+	E.gridcols = E.screencols / 2;
 	E.basestep= 0;
 	
+  // Init the grid to display
 	E.grid = calloc( E.gridrows, sizeof(int *) );
 	for ( int i = 0; i < E.gridrows; i++ )
 		E.grid[i] = calloc( E.gridcols, sizeof(int) );
 
 	init_hashtab();
-	int n = 4;
-	int points[4][2] = {{0, 0}, {0, 7}, {1, 7}, {2, 7}};
+	//int n = 4;
+	//int points[4][2] = {{0, 0}, {0, 7}, {1, 7}, {2, 7}};
 	//Node *root = construct(points, n);
+  //E.root = root;
 	if (argc == 2)
 		E.root = readPattern(argv[1]);
 	else
 		E.root = get_zero(1);
 	gridRender();
 
-	log_warn("Universe Created: (%d x %d), Depth: %d, Population: %d", 1 << E.root->k, 1 << E.root->k, E.root->k, E.root->n);
+	log_warn("Universe Created: (%d x %d), Depth: %d, Population: %d, E.ox:%d, E.oy:%d, E.offx:%d, E.offy:%d", 
+      1 << E.root->k, 1 << E.root->k, E.root->k, E.root->n, E.ox, E.oy, E.offx, E.offy);
 }
 
 int main(int argc, char *argv[] ){
-	
-	log_set_quiet(true);
-	FILE *fp = fopen("lifeterm.log", "a+");
-	if (fp==NULL){
-		printf("unable to open file to write log");
-		return 0;
-	}
-	log_add_fp(fp, 3); // 3 is error, 0 is info
-	log_info("Start");
-	log_info("-------------------------------------------------------");
-
+  log_set_quiet(true);
+  if (getenv("DEBUG")){
+    FILE *fp = fopen("lifeterm.log", "a+");
+    if (fp==NULL){
+      printf("unable to open file to write log");
+      return 0;
+    }
+    log_add_fp(fp, 3); // 3 is warn, 0 is trace
+    log_info("Start");
+    log_info("-------------------------------------------------------");
+  } 	
 	enableRawMode();
 	initEditor(argc, argv);
 

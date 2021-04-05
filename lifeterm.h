@@ -77,9 +77,10 @@ void abFree(struct abuf *ab);
 
 /*** grid operations ***/
 void pushRoot();
-void resetRoot();
+void emptyRoot();
 void gridMark();
 void gridErase();
+void gridUpdateOrigin();
 void gridUpdate();
 void gridRender();
 void gridPlay();
