@@ -240,12 +240,12 @@ void changeBasestep(int order){
 void editorMoveCursor(int key){
 	switch(key){
 		case ARROW_LEFT:
-			if (E.cx!=0) E.cx-=2;
-			else E.offx+=2;
+			if (E.cx!=0) E.cx-=1;
+			else E.offx+=1;
 			break;
 		case ARROW_RIGHT:
-			if (E.cx!= E.gridcols-2) E.cx+=2;
-			else E.offx-=2;
+			if (E.cx!= E.gridcols-1) E.cx+=1;
+			else E.offx-=1;
 			break;
 		case ARROW_UP:
 			if(E.cy!=0)	E.cy--;
@@ -474,11 +474,11 @@ void editorDrawGrid(struct abuf *ab) {
 		for (int col = 0; col < E.gridcols; col++){
 			if (E.grid[row][col] == 1){
 				abAppend(ab, "\x1b[7m", 4);// switch to inverted color
-				abAppend(ab, "  ", 2);
+				abAppend(ab, " ", 1);
 				abAppend(ab, "\x1b[m", 3);// switch back to normal color
 			}
 			else
-				abAppend(ab, "  ", 2);
+				abAppend(ab, " ", 1);
 		}
 		abAppend(ab, "\r\n", 2);
 	}
@@ -511,7 +511,7 @@ void initEditor(int argc, char *argv[]){
 	E.cx = 0; E.cy = 0;
 	E.offx = 0; E.offy = 0;
 	E.gridrows = E.screenrows - 1; // status bar
-	E.gridcols = E.screencols / 2;
+	E.gridcols = E.screencols;
 	E.basestep= 0;
 	
   // Init the grid to display
